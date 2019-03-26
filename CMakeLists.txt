@@ -10,8 +10,8 @@ project(sample_project CXX C)
 # Core library. *.cpp should be added here.
 
 # Main entry point.
-add_executable(main
-  ./src/main.cpp)
+add_executable(betweenness-cpp
+  ./src/main.cpp ./src/utils.cpp)
 
 # Link core to main.
 
