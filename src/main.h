@@ -7,6 +7,5 @@ typedef struct {
     std::string OutputPath;
 } Config;
 
-Config getCL(int &arg, char **argv);
 
 #endif

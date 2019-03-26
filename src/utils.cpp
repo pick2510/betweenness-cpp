@@ -1,10 +1,12 @@
 #include "utils.h"
 
+#include <unistd.h>
 #include <glob.h>
 #include <string.h>
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
+#include "main.h"
 
 std::vector<std::string> glob(const std::string &pattern)
 {
@@ -46,7 +48,11 @@ bool cmp_radii(const std::vector<std::string> &a, const std::vector<std::string>
     return i_a < i_b;
 }
 
-std::vector<std::vector<std::string>> read_radius(const std::string &file)
+
+
+
+
+std::vector<std::vector<std::string>> read_file(const std::string &file)
 {
     const int skip_lines = 9;
     std::vector<std::vector<std::string>> file_content;
@@ -88,4 +94,27 @@ std::vector<double> get_lookup_table(std::vector<std::vector<std::string>> &radi
         lookup_table[std::stoi(elem[0])] = std::stod(elem[5]);
     }
     return lookup_table;
+}
+
+Config getCL(int &argc, char **argv)
+{
+  Config runningConfig;
+  int opt;
+  while ((opt = getopt(argc, argv, "i:o:")) != -1)
+  {
+    switch (opt)
+    {
+    case 'o':
+      runningConfig.OutputPath = optarg;
+      break;
+    case 'i':
+      runningConfig.InputPath = optarg;
+      break;
+    }
+  }
+  if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
+  {
+    throw std::invalid_argument("Please use Input and Output Path");
+  }
+  return runningConfig;
 }

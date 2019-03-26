@@ -1,5 +1,4 @@
 #include <iostream>
-#include <unistd.h>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -40,31 +39,10 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
   SI::natural::sort(chain_file_list);
-  auto radius_file = read_radius(radius_file_list[0]);
+  auto radius_file = read_file(radius_file_list[0]);
   radius_file.pop_back();
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
 }
 
-Config getCL(int &argc, char **argv)
-{
-  Config runningConfig;
-  int opt;
-  while ((opt = getopt(argc, argv, "i:o:")) != -1)
-  {
-    switch (opt)
-    {
-    case 'o':
-      runningConfig.OutputPath = optarg;
-      break;
-    case 'i':
-      runningConfig.InputPath = optarg;
-      break;
-    }
-  }
-  if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
-  {
-    throw std::invalid_argument("Please use Input and Output Path");
-  }
-  return runningConfig;
-}
+
