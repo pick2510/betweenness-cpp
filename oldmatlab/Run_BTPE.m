@@ -33,7 +33,7 @@ for j=46800000%:5000:47000000;
             p2 = find(R==id(2,1));
             rad1=R(p1,2);
             rad2=R(p2,2);
-            
+       
             %Connectivity Matrix
     
             Connectivity(p1,p2)=1;
