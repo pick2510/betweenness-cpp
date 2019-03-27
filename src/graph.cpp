@@ -27,7 +27,7 @@ void Graph::generate_graph(){
         std::vector<std::string> splitted_line;
         split_string(line, splitted_line);
         boost::add_edge(v_map[splitted_line[Graph::particle_1]], v_map[splitted_line[Graph::particle_2]] , graph);
-        boost::add_edge(v_map[splitted_line[Graph::particle_2]], v_map[splitted_line[Graph::particle_1]] , graph);
+        //boost::add_edge(v_map[splitted_line[Graph::particle_2]], v_map[splitted_line[Graph::particle_1]] , graph);
 
 
     }
