@@ -48,7 +48,4 @@ int main(int argc, char **argv)
   Graph mygraph(chain_file_list[0], vertice_map);
   mygraph.generate_graph();
   mygraph.calculate_betweenness_centrality();
-
 }
-
-
