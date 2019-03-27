@@ -27,6 +27,8 @@ void Graph::generate_graph(){
         std::vector<std::string> splitted_line;
         split_string(line, splitted_line);
         boost::add_edge(v_map[splitted_line[Graph::particle_1]], v_map[splitted_line[Graph::particle_2]] , graph);
+        boost::add_edge(v_map[splitted_line[Graph::particle_2]], v_map[splitted_line[Graph::particle_1]] , graph);
+
 
     }
 
@@ -36,7 +38,6 @@ void Graph::generate_graph(){
 void Graph::calculate_betweenness_centrality(){
    auto c_map = Centrality_Map(boost::num_vertices(graph), boost::get(boost::vertex_index, graph));
    boost::brandes_betweenness_centrality(graph, c_map);
-   std::cout << c_map[2] << std::endl;
    BGL_FORALL_VERTICES(vertex, graph, Dump_Graph){
        std::cout << vertex << ": " << c_map[vertex] << std::endl;
    }
