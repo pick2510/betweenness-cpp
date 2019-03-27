@@ -7,6 +7,7 @@
 #include "main.h"
 #include "utils.h"
 #include "natural_sort.hpp"
+#include "graph.h"
 
 int main(int argc, char **argv)
 {
@@ -43,6 +44,10 @@ int main(int argc, char **argv)
   radius_file.pop_back();
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
+  Graph mygraph(chain_file_list[0]);
+  mygraph.generate_graph();
+  mygraph.calculate_betweenness_centrality();
+
 }
 
 
