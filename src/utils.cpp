@@ -1,11 +1,13 @@
 #include "utils.h"
 
 #include <unistd.h>
+#include <map>
 #include <glob.h>
 #include <string.h>
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
+#include <iostream>
 #include "main.h"
 
 std::vector<std::string> glob(const std::string &pattern)
@@ -48,10 +50,6 @@ bool cmp_radii(const std::vector<std::string> &a, const std::vector<std::string>
     return i_a < i_b;
 }
 
-
-
-
-
 std::vector<std::vector<std::string>> read_file(const std::string &file)
 {
     const int skip_lines = 9;
@@ -86,11 +84,24 @@ std::string trim(const std::string &s)
     return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
 }
 
+std::map<std::string, int> get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile)
+{
+    std::map<std::string, int> vertice_map;
+    int i = 0;
+    for (auto &elem : radiusfile)
+    {
+        vertice_map[elem[0]] = i++;
+    }
 
-std::vector<double> get_lookup_table(std::vector<std::vector<std::string>> &radiusfile){
+    return vertice_map;
+}
+
+std::vector<double> get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile)
+{
     int lt_size = std::stoi(radiusfile.back()[0]) + 1;
     std::vector<double> lookup_table(lt_size, 0);
-    for (auto &elem : radiusfile){
+    for (auto &elem : radiusfile)
+    {
         lookup_table[std::stoi(elem[0])] = std::stod(elem[5]);
     }
     return lookup_table;
@@ -98,23 +109,23 @@ std::vector<double> get_lookup_table(std::vector<std::vector<std::string>> &radi
 
 Config getCL(int &argc, char **argv)
 {
-  Config runningConfig;
-  int opt;
-  while ((opt = getopt(argc, argv, "i:o:")) != -1)
-  {
-    switch (opt)
+    Config runningConfig;
+    int opt;
+    while ((opt = getopt(argc, argv, "i:o:")) != -1)
     {
-    case 'o':
-      runningConfig.OutputPath = optarg;
-      break;
-    case 'i':
-      runningConfig.InputPath = optarg;
-      break;
+        switch (opt)
+        {
+        case 'o':
+            runningConfig.OutputPath = optarg;
+            break;
+        case 'i':
+            runningConfig.InputPath = optarg;
+            break;
+        }
     }
-  }
-  if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
-  {
-    throw std::invalid_argument("Please use Input and Output Path");
-  }
-  return runningConfig;
+    if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
+    {
+        throw std::invalid_argument("Please use Input and Output Path");
+    }
+    return runningConfig;
 }

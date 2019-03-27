@@ -21,10 +21,11 @@ class Graph
     std::vector<std::vector<std::string>> filecontent;
     Centrality_Map c_map;
     Dump_Graph graph;
+    std::map<std::string,int> &v_map;
     void advance_fpointer();
   
   public:
-    Graph(std::string &Path);
+    Graph(std::string &Path, std::map<std::string,int> &vertices_map);
     void generate_graph();
     void calculate_betweenness_centrality();
     ~Graph();

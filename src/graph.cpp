@@ -6,7 +6,7 @@
 #include <boost/graph/iteration_macros.hpp>
 #include "utils.h"
 
-Graph::Graph(std::string &Path)
+Graph::Graph(std::string &Path, std::map<std::string,int> &vertices_map) : v_map(vertices_map)
 {
     file.open(Path);
     advance_fpointer();
@@ -26,7 +26,8 @@ void Graph::generate_graph(){
     while (std::getline(file, line)){
         std::vector<std::string> splitted_line;
         split_string(line, splitted_line);
-        boost::add_edge(std::stoi(splitted_line[Graph::particle_1]), std::stoi(splitted_line[Graph::particle_2]), graph);
+        boost::add_edge(v_map[splitted_line[Graph::particle_1]], v_map[splitted_line[Graph::particle_2]] , graph);
+
     }
 
   
