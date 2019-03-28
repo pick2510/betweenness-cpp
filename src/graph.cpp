@@ -8,7 +8,7 @@
 #include "utils.h"
 #include "data.h"
 
-Graph::Graph(std::string &Path, std::map<std::string, int> &vertices_map) : v_map(vertices_map), graph(vertices_map.size())
+Graph::Graph(std::string &Path, const std::map<std::string, int> &vertices_map) : v_map(vertices_map), graph(vertices_map.size())
 {
     file.open(Path);
     set_fpointer(Graph::ts_line);
@@ -47,7 +47,7 @@ void Graph::generate_graph()
     {
         std::vector<std::string> splitted_line;
         split_string(line, splitted_line);
-        boost::add_edge(v_map[splitted_line[Graph::particle_1]], v_map[splitted_line[Graph::particle_2]], graph);
+        boost::add_edge(v_map.at(splitted_line[Graph::particle_1]), v_map.at(splitted_line[Graph::particle_2]), graph);
     }
     BOOST_LOG_TRIVIAL(info) << "Graph finished!";
 }

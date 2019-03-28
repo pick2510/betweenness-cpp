@@ -45,7 +45,10 @@ int main(int argc, char **argv)
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
-  Graph mygraph(chain_file_list[0], vertice_map);
-  mygraph.calc();
-  auto mean = mygraph.get_mean();
+  #pragma omp parallel for
+  for (std::size_t i = 0; i < chain_file_list.size(); ++i)
+  {
+    Graph mygraph(chain_file_list[i], vertice_map);
+    mygraph.calc();
+  }
 }

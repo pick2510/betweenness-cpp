@@ -25,7 +25,7 @@ private:
   std::ifstream file;
   std::vector<std::vector<std::string>> filecontent;
   Centrality_Map c_map;
-  std::map<std::string, int> &v_map;
+  const std::map<std::string, int> &v_map;
   std::map<int, double> betweenness_centrality;
   Dump_Graph graph;
   long timestep;
@@ -36,7 +36,7 @@ private:
   void set_fpointer(int n);
 
 public:
-  Graph(std::string &Path, std::map<std::string, int> &vertices_map);
+  Graph(std::string &Path, const std::map<std::string, int> &vertices_map);
   void calc();
   std::map<int, double> get_centrality_map();
   long get_timestep();
