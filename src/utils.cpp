@@ -129,3 +129,14 @@ Config getCL(int &argc, char **argv)
     }
     return runningConfig;
 }
+
+void goto_line(std::ifstream &file, unsigned long n){
+    std::string trashline;
+    file.clear();
+    file.seekg(0, std::ios::beg);
+
+    for (unsigned long i = 0; i < n; i++){
+        std::getline(file,trashline);
+    }
+}
+

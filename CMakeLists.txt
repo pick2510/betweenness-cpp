@@ -12,6 +12,10 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+set(Boost_USE_STATIC_LIBS        ON) # only find static libs
+set(Boost_USE_MULTITHREADED      ON)
+set(Boost_USE_STATIC_RUNTIME    OFF)
+find_package(Boost COMPONENTS log)
 
 
 
@@ -24,7 +28,7 @@ add_executable(betweenness-cpp
   ./src/main.cpp ./src/utils.cpp ./src/graph.cpp)
 
 # Link core to main.
-
+target_link_libraries(betweenness-cpp ${Boost_LIBRARIES})
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O2")
