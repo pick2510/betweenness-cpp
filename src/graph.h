@@ -5,10 +5,14 @@
 #include <fstream>
 #include <vector>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/adjacency_matrix.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
 
-typedef boost::adjacency_list<boost::listS, boost::vecS, boost::undirectedS> Dump_Graph; 
+typedef boost::adjacency_list<boost::listS, boost::vecS, boost::undirectedS> Dump_Graph;
+typedef boost::adjacency_matrix<boost::undirectedS> Dump_Graph_Matrix;
 typedef boost::shared_array_property_map<double, boost::property_map<Dump_Graph, boost::vertex_index_t>::const_type> Centrality_Map;
+typedef boost::shared_array_property_map<double, boost::property_map<Dump_Graph_Matrix, boost::vertex_index_t>::const_type> Centrality_Map_Matrix;
+
 
 class Graph
 {
@@ -20,8 +24,8 @@ class Graph
     std::ifstream file;
     std::vector<std::vector<std::string>> filecontent;
     Centrality_Map c_map;
-    Dump_Graph graph;
     std::map<std::string,int> &v_map;
+    Dump_Graph_Matrix graph;
     void advance_fpointer();
   
   public:
