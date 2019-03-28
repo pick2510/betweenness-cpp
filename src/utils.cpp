@@ -8,7 +8,13 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+
+#include <boost/log/trivial.hpp>
+
 #include "main.h"
+
+
+
 
 std::vector<std::string> glob(const std::string &pattern)
 {
@@ -42,6 +48,9 @@ std::vector<std::string> glob(const std::string &pattern)
     // done
     return filenames;
 }
+
+
+
 
 bool cmp_radii(const std::vector<std::string> &a, const std::vector<std::string> &b)
 {

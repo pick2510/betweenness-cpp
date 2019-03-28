@@ -8,16 +8,21 @@
 #include "utils.h"
 #include "natural_sort.hpp"
 #include "graph.h"
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include "omp.h"
+
 
 int main(int argc, char **argv)
 {
-  std::cout << "****************************************\n";
-  std::cout << "Node betweenness centrality\n";
-  std::cout << "Kintali (2008) arXiv:0809.1906v2 [cs.DS] \n";
-  std::cout << "(generalization to directed and disconnected graphs)\n";
-  std::cout << "C++ Version\n";
-  std::cout << "by Dominik Strebel (2019)\n";
-  std::cout << "****************************************\n";
+  boost::log::add_console_log(std::cout, boost::log::keywords::format = "[%TimeStamp%] [%Severity%] %Message%");
+  BOOST_LOG_TRIVIAL(info) << "****************************************";
+  BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
+  BOOST_LOG_TRIVIAL(info) << "using BOOST Graph Library";
+  BOOST_LOG_TRIVIAL(info) << "Calculates different properties";
+  BOOST_LOG_TRIVIAL(info)<< "by Dominik Strebel (2019)";
+  BOOST_LOG_TRIVIAL(info) << "****************************************";
+  BOOST_LOG_TRIVIAL(info) << "Using [" << omp_get_max_threads() << "] threads";
   Config runningConf;
   try
   {
@@ -45,7 +50,7 @@ int main(int argc, char **argv)
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
-  #pragma omp parallel for
+ #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
   {
     Graph mygraph(chain_file_list[i], vertice_map);
