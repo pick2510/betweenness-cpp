@@ -46,6 +46,6 @@ int main(int argc, char **argv)
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
   Graph mygraph(chain_file_list[0], vertice_map);
-  mygraph.generate_graph();
-  mygraph.calculate_betweenness_centrality();
+  mygraph.calc();
+  auto mean = mygraph.get_mean();
 }
