@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -15,7 +16,7 @@
 
 int main(int argc, char **argv)
 {
-  boost::log::add_console_log(std::cout, boost::log::keywords::format = "[%TimeStamp%] [%Severity%] %Message%");
+  //boost::log::add_console_log(std::cout, boost::log::keywords::format = "[%TimeStamp%] [%Severity%] %Message%");
   BOOST_LOG_TRIVIAL(info) << "****************************************";
   BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
   BOOST_LOG_TRIVIAL(info) << "using BOOST Graph Library";
@@ -50,10 +51,29 @@ int main(int argc, char **argv)
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
+  std::vector<Result> results;
+  results.reserve(chain_file_list.size());
+  BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
  #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
   {
     Graph mygraph(chain_file_list[i], vertice_map);
     mygraph.calc();
+    results.push_back(mygraph.get_result());
   }
+  std::sort(results.begin(), results.end(), cmp_ts);
+  std::ofstream ts_mean_file(runningConf.OutputPath + "/betweenness_centrality_mean.csv");
+  write_ts_header(ts_mean_file);
+  for (auto &v: results){
+    std::cout << v.ts;
+    ts_mean_file << std::to_string(v.ts) << ";" << std::setprecision(9) << std::to_string(v.mean) << "\n";
+    std::ofstream ts_file(runningConf.OutputPath + "/centrality_" + std::to_string(v.ts) + ".csv");
+    write_cent_header(ts_file);
+    for (auto &kv: v.b_centrality){
+      ts_file << kv.first << ";" << std::setprecision(9) << kv.second << "\n";
+    }
+    ts_file.close();
+  }
+  ts_mean_file.flush();
+  ts_mean_file.close();
 }

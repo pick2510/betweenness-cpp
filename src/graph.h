@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include "data.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/adjacency_matrix.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
@@ -37,6 +38,7 @@ private:
 
 public:
   Graph(std::string &Path, const std::map<std::string, int> &vertices_map);
+  Result get_result();
   void calc();
   std::map<int, double> get_centrality_map();
   long get_timestep();

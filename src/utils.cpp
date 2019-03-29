@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <unistd.h>
+#include "natural_sort.hpp"
 #include <map>
 #include <glob.h>
 #include <string.h>
@@ -49,7 +50,10 @@ std::vector<std::string> glob(const std::string &pattern)
     return filenames;
 }
 
-
+bool cmp_ts(const Result &a, const Result &b)
+{
+    return SI::natural::compare(std::to_string(a.ts), std::to_string(b.ts)); 
+}
 
 
 bool cmp_radii(const std::vector<std::string> &a, const std::vector<std::string> &b)
@@ -148,4 +152,15 @@ void goto_line(std::ifstream &file, unsigned long n){
         std::getline(file,trashline);
     }
 }
+
+void write_ts_header(std::ofstream &out){
+
+    out << "ts;mean_centrality\n";
+
+}
+
+void write_cent_header(std::ofstream &out){
+    out << "particle;centrality\n";
+}
+
 

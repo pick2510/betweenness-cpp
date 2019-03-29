@@ -79,6 +79,16 @@ double Graph::get_mean()
     return boost::accumulators::mean(acc);
 }
 
+Result Graph::get_result()
+{
+    Result res;
+    res.b_centrality = betweenness_centrality;
+    res.mean = boost::accumulators::mean(acc);
+    res.ts = timestep;
+    std::cout << res.ts;
+    return res;
+}
+
 Graph::~Graph()
 {
     file.close();
