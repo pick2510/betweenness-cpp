@@ -85,7 +85,6 @@ Result Graph::get_result()
     res.b_centrality = betweenness_centrality;
     res.mean = boost::accumulators::mean(acc);
     res.ts = timestep;
-    std::cout << res.ts;
     return res;
 }
 
