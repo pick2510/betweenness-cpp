@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   auto vertice_map = get_vertice_map(radius_file);
   auto inv_vertice_map = inverse_map(vertice_map);
   std::vector<Result> results;
-  results.reserve(chain_file_list.size());
+  results.reserve(chain_file_list.size() + 10);
   BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
  #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
@@ -66,7 +66,6 @@ int main(int argc, char **argv)
   std::ofstream ts_mean_file(runningConf.OutputPath + "/betweenness_centrality_mean.csv");
   write_ts_header(ts_mean_file);
   for (auto &v: results){
-    std::cout << v.ts;
     ts_mean_file << std::to_string(v.ts) << ";" << std::setprecision(9) << std::to_string(v.mean) << "\n";
     std::ofstream ts_file(runningConf.OutputPath + "/centrality_" + std::to_string(v.ts) + ".csv");
     write_cent_header(ts_file);
