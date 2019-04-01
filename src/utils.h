@@ -35,5 +35,16 @@ void split_string(const std::string& str, Container& cont, char delim = ' ')
 }
 
 
+template<typename K, typename V>
+std::map<V,K> inverse_map(std::map<K,V> &map)
+{
+	std::map<V,K> inv;
+	for (auto &kv: map){
+        inv[kv.second] = kv.first;
+    }
+    return inv;
+}
+
+
 
 #endif

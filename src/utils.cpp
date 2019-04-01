@@ -160,7 +160,7 @@ void write_ts_header(std::ofstream &out){
 }
 
 void write_cent_header(std::ofstream &out){
-    out << "particle;centrality\n";
+    out << "particleid;centrality\n";
 }
 
 

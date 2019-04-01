@@ -51,6 +51,7 @@ int main(int argc, char **argv)
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
+  auto inv_vertice_map = inverse_map(vertice_map);
   std::vector<Result> results;
   results.reserve(chain_file_list.size());
   BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
@@ -70,7 +71,7 @@ int main(int argc, char **argv)
     std::ofstream ts_file(runningConf.OutputPath + "/centrality_" + std::to_string(v.ts) + ".csv");
     write_cent_header(ts_file);
     for (auto &kv: v.b_centrality){
-      ts_file << kv.first << ";" << std::setprecision(9) << kv.second << "\n";
+      ts_file << inv_vertice_map[kv.first] << ";" << std::setprecision(9) << kv.second << "\n";
     }
     ts_file.close();
   }
