@@ -40,12 +40,14 @@ int main(int argc, char **argv)
   chainpattern = trim(chainpattern);
   std::vector<std::string> chain_file_list = glob(chainpattern);
   std::vector<std::string> radius_file_list = glob(xyzpattern);
+  
   if (radius_file_list.empty())
   {
     std::cout << "Need at least one file with radii *.tet\n";
     exit(EXIT_FAILURE);
   }
   SI::natural::sort(chain_file_list);
+  
   auto radius_file = read_file(radius_file_list[0]);
   radius_file.pop_back();
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
@@ -53,15 +55,19 @@ int main(int argc, char **argv)
   auto vertice_map = get_vertice_map(radius_file);
   auto inv_vertice_map = inverse_map(vertice_map);
   std::vector<Result> results;
-  results.reserve(chain_file_list.size() + 10);
-  BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
+  //BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
+  omp_lock_t mutex;
+  omp_init_lock(&mutex);
  #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
   {
     Graph mygraph(chain_file_list[i], vertice_map);
     mygraph.calc();
+    omp_set_lock(&mutex);
     results.push_back(mygraph.get_result());
+    omp_unset_lock(&mutex);
   }
+  omp_destroy_lock(&mutex);
   std::sort(results.begin(), results.end(), cmp_ts);
   std::ofstream ts_mean_file(runningConf.OutputPath + "/betweenness_centrality_mean.csv");
   write_ts_header(ts_mean_file);
