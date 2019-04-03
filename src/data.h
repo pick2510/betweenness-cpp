@@ -8,7 +8,7 @@
 typedef struct {
     std::string InputPath;
     std::string OutputPath;
-    char sep[2] = ",";
+    char sep[2] = " ";
 } Config;
 
 
