@@ -15,9 +15,6 @@
 
 #include "main.h"
 
-
-
-
 std::vector<std::string> glob(const std::string &pattern)
 {
     using namespace std;
@@ -53,9 +50,8 @@ std::vector<std::string> glob(const std::string &pattern)
 
 bool cmp_ts(const Result &a, const Result &b)
 {
-    return SI::natural::compare(std::to_string(a.ts), std::to_string(b.ts)); 
+    return SI::natural::compare(std::to_string(a.ts), std::to_string(b.ts));
 }
-
 
 bool cmp_radii(const std::vector<std::string> &a, const std::vector<std::string> &b)
 {
@@ -141,7 +137,6 @@ Config getCL(int &argc, char **argv)
             runningConfig.sep[1] = '\0';
             break;
         }
-
     }
     if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
     {
@@ -150,43 +145,50 @@ Config getCL(int &argc, char **argv)
     return runningConfig;
 }
 
-void goto_line(std::ifstream &file, unsigned long n){
+void goto_line(std::ifstream &file, unsigned long n)
+{
     std::string trashline;
     file.clear();
     file.seekg(0, std::ios::beg);
 
-    for (unsigned long i = 0; i < n; i++){
-        std::getline(file,trashline);
+    for (unsigned long i = 0; i < n; i++)
+    {
+        std::getline(file, trashline);
     }
 }
 
-void write_ts_header(std::ofstream &out, Config &conf){
+void write_ts_header(std::ofstream &out, Config &conf)
+{
 
-    out << "ts" << conf.sep << "mean_centrality\n";
-
+    out << "ts" << conf.sep << "mean" << conf.sep << "var" << conf.sep
+        << "std" << conf.sep << "skew" << conf.sep
+        << "kurtosis" << conf.sep << "q090" << conf.sep
+        << "q099"
+        << "\n";
 }
 
-void write_cent_header(std::ofstream &out, Config &conf){
+void write_cent_header(std::ofstream &out, Config &conf)
+{
     out << "particleid" << conf.sep << "centrality\n";
 }
 
-
 char *trimwhitespace(char *str)
 {
-  char *end;
+    char *end;
 
-  while(isspace((unsigned char)*str)) str++;
+    while (isspace((unsigned char)*str))
+        str++;
 
-  if(*str == 0) 
+    if (*str == 0)
+        return str;
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end))
+        end--;
+
+    // Write new null terminator character
+    end[1] = '\0';
+
     return str;
-
-  // Trim trailing space
-  end = str + strlen(str) - 1;
-  while(end > str && isspace((unsigned char)*end)) end--;
-
-  // Write new null terminator character
-  end[1] = '\0';
-
-  return str;
 }
-

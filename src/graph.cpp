@@ -5,6 +5,7 @@
 #include <boost/graph/betweenness_centrality.hpp>
 #include <boost/graph/iteration_macros.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/accumulators/statistics.hpp>
 #include "utils.h"
 #include "data.h"
 
@@ -54,14 +55,17 @@ void Graph::generate_graph()
 
 void Graph::calculate_betweenness_centrality()
 {
-    //const double b_ij = 1 / ((v_map.size() - 1) * (v_map.size() - 2));
     c_map = Centrality_Map(boost::num_vertices(graph), boost::get(boost::vertex_index, graph));
     boost::brandes_betweenness_centrality(graph, c_map);
     BOOST_LOG_TRIVIAL(info) << "Calculated Betweenness Centrality";
     BGL_FORALL_VERTICES(vertex, graph, Dump_Graph)
     {
-        betweenness_centrality[vertex] = c_map[vertex];
+        auto val = c_map[vertex];
+        betweenness_centrality[vertex] = val;
+        v_betweeness.push_back(val);
     }
+    std::sort(v_betweeness.begin(), v_betweeness.end());
+
 }
 
 std::map<int, double> Graph::get_centrality_map()
@@ -83,8 +87,13 @@ Result Graph::get_result()
 {
     Result res;
     res.b_centrality = betweenness_centrality;
-    res.mean = boost::accumulators::mean(acc);
+    res.mean = accumulators::mean(acc);
     res.ts = timestep;
+    res.q_090 = get_percentile_vector(v_betweeness, 0.90);
+    res.q_099 = get_percentile_vector(v_betweeness, 0.99);
+    res.kur = accumulators::kurtosis(acc);
+    res.var = accumulators::variance(acc);
+    res.skew = accumulators::skewness(acc);
     return res;
 }
 
