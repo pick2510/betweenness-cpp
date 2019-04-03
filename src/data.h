@@ -3,9 +3,12 @@
 #include <string>
 #include <map>
 
+
+
 typedef struct {
     std::string InputPath;
     std::string OutputPath;
+    char sep[2] = ",";
 } Config;
 
 

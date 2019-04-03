@@ -70,13 +70,13 @@ int main(int argc, char **argv)
   omp_destroy_lock(&mutex);
   std::sort(results.begin(), results.end(), cmp_ts);
   std::ofstream ts_mean_file(runningConf.OutputPath + "/betweenness_centrality_mean.csv");
-  write_ts_header(ts_mean_file);
+  write_ts_header(ts_mean_file, runningConf);
   for (auto &v: results){
-    ts_mean_file << std::to_string(v.ts) << ";" << std::setprecision(9) << std::to_string(v.mean) << "\n";
+    ts_mean_file << std::to_string(v.ts) << runningConf.sep << std::setprecision(9) << std::to_string(v.mean) << "\n";
     std::ofstream ts_file(runningConf.OutputPath + "/centrality_" + std::to_string(v.ts) + ".csv");
-    write_cent_header(ts_file);
+    write_cent_header(ts_file, runningConf);
     for (auto &kv: v.b_centrality){
-      ts_file << inv_vertice_map[kv.first] << ";" << std::setprecision(9) << kv.second << "\n";
+      ts_file << inv_vertice_map[kv.first] << runningConf.sep << std::setprecision(9) << kv.second << "\n";
     }
     ts_file.close();
   }

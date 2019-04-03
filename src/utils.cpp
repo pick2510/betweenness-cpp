@@ -9,6 +9,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cstring>
 
 #include <boost/log/trivial.hpp>
 
@@ -124,7 +125,7 @@ Config getCL(int &argc, char **argv)
 {
     Config runningConfig;
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:")) != -1)
+    while ((opt = getopt(argc, argv, "i:o:s:")) != -1)
     {
         switch (opt)
         {
@@ -134,7 +135,13 @@ Config getCL(int &argc, char **argv)
         case 'i':
             runningConfig.InputPath = optarg;
             break;
+        case 's':
+            char *p = trimwhitespace(optarg);
+            strncpy(runningConfig.sep, p, 1);
+            runningConfig.sep[1] = '\0';
+            break;
         }
+
     }
     if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty())
     {
@@ -153,14 +160,33 @@ void goto_line(std::ifstream &file, unsigned long n){
     }
 }
 
-void write_ts_header(std::ofstream &out){
+void write_ts_header(std::ofstream &out, Config &conf){
 
-    out << "ts;mean_centrality\n";
+    out << "ts" << conf.sep << "mean_centrality\n";
 
 }
 
-void write_cent_header(std::ofstream &out){
-    out << "particleid;centrality\n";
+void write_cent_header(std::ofstream &out, Config &conf){
+    out << "particleid" << conf.sep << "centrality\n";
 }
 
+
+char *trimwhitespace(char *str)
+{
+  char *end;
+
+  while(isspace((unsigned char)*str)) str++;
+
+  if(*str == 0) 
+    return str;
+
+  // Trim trailing space
+  end = str + strlen(str) - 1;
+  while(end > str && isspace((unsigned char)*end)) end--;
+
+  // Write new null terminator character
+  end[1] = '\0';
+
+  return str;
+}
 

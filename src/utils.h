@@ -19,8 +19,9 @@ std::vector<double> get_lookup_table(const std::vector<std::vector<std::string>>
 Config getCL(int &argc, char **argv);
 void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
-void write_ts_header(std::ofstream &out);
-void write_cent_header(std::ofstream &out);
+void write_ts_header(std::ofstream &out, Config &conf);
+void write_cent_header(std::ofstream &out, Config &conf);
+char *trimwhitespace(char *str);
 
 
 
