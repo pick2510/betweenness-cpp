@@ -35,12 +35,17 @@ int main(int argc, char **argv)
     std::cout << e.what() << std::endl;
     exit(EXIT_FAILURE);
   }
+
+// define pattern fro globbing chain files, trim strings, and glob
+
   std::string chainpattern(runningConf.InputPath + "/*.chain");
   std::string xyzpattern(runningConf.InputPath + "/*.tet");
   xyzpattern = trim(xyzpattern);
   chainpattern = trim(chainpattern);
   std::vector<std::string> chain_file_list = glob(chainpattern);
   std::vector<std::string> radius_file_list = glob(xyzpattern);
+
+// sanity check of file list 
 
   if (radius_file_list.empty())
   {
@@ -49,16 +54,18 @@ int main(int argc, char **argv)
   }
   SI::natural::sort(chain_file_list);
 
+// Read one radius file, create lookup table for continous particle ids.
+// Create 
   auto radius_file = read_file(radius_file_list[0]);
   radius_file.pop_back();
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
   auto inv_vertice_map = inverse_map(vertice_map);
+  
+  
+  
   std::vector<Result> results;
-  //BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
-
-
   omp_lock_t mutex;
   omp_init_lock(&mutex);
 #pragma omp parallel for
