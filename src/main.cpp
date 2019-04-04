@@ -55,14 +55,17 @@ int main(int argc, char **argv)
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
   auto inv_vertice_map = inverse_map(vertice_map);
+  auto is_even = vertice_map.size() % 2 == 0;
   std::vector<Result> results;
   //BOOST_LOG_TRIVIAL(info) << "Initialized result vector with capacity: " << chain_file_list.size();
+
+
   omp_lock_t mutex;
   omp_init_lock(&mutex);
 #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
   {
-    Graph mygraph(chain_file_list[i], vertice_map);
+    Graph mygraph(chain_file_list[i], vertice_map, is_even);
     mygraph.calc();
     omp_set_lock(&mutex);
     results.push_back(mygraph.get_result());

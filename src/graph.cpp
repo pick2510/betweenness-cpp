@@ -9,7 +9,7 @@
 #include "utils.h"
 #include "data.h"
 
-Graph::Graph(std::string &Path, const std::map<std::string, int> &vertices_map) : v_map(vertices_map), graph(vertices_map.size())
+Graph::Graph(std::string &Path, const std::map<std::string, int> &vertices_map) :  v_map{vertices_map}, graph{vertices_map.size()}
 {
     file.open(Path);
     set_fpointer(Graph::ts_line);

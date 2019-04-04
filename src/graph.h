@@ -66,7 +66,7 @@ V get_percentile_map(std::map<K,V> map, double percentile){
 
 template <typename T>
 T get_percentile_vector(std::vector<T> &valVec, double percentile){
-  int n = std::ceil(percentile * valVec.size()) - 1;
+  int n = std::round(percentile * valVec.size()) - 1;
   return valVec[n];
 }
 
