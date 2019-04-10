@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <limits>
+#include <atomic>
 
 #include "main.h"
 #include "utils.h"
@@ -62,12 +63,14 @@ int main(int argc, char **argv)
   auto lookup_table = get_lookup_table(radius_file);
   auto vertice_map = get_vertice_map(radius_file);
   auto inv_vertice_map = inverse_map(vertice_map);
-  
+  auto t_len = chain_file_list.size();
   
   
   std::vector<Result> results;
   omp_lock_t mutex;
   omp_init_lock(&mutex);
+  std::atomic<long> index {0};
+  double percent {0.0};
 #pragma omp parallel for
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
   {
@@ -75,7 +78,10 @@ int main(int argc, char **argv)
     mygraph.calc();
     omp_set_lock(&mutex);
     results.push_back(mygraph.get_result());
+    index++;
     omp_unset_lock(&mutex);
+    percent = (index / t_len) * 100;
+    BOOST_LOG_TRIVIAL(info) << percent << "% (" << index << " of " << t_len << ") done";
   }
   omp_destroy_lock(&mutex);
   std::sort(results.begin(), results.end(), cmp_ts);
