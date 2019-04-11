@@ -11,13 +11,17 @@
 
 #include "main.h"
 #include "utils.h"
+#include "data.h"
 #include "natural_sort.hpp"
 #include "graph.h"
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/mpi/environment.hpp>
+#include <boost/mpi/collectives.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/status.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/serialization.hpp>
 
 constexpr int MASTER = 0;
 
@@ -28,10 +32,11 @@ int main(int argc, char **argv)
   std::vector<Result> results;
   Config runningConf;
   std::map<int, std::string> inv_vertice_map;
+  std::map<std::string, int> vertice_map;
 
   if (world.rank() == MASTER)
   {
-    
+
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
     BOOST_LOG_TRIVIAL(info) << "using BOOST Graph Library";
@@ -72,55 +77,64 @@ int main(int argc, char **argv)
     radius_file.pop_back();
     std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
     auto lookup_table = get_lookup_table(radius_file);
-    auto vertice_map = get_vertice_map(radius_file);
-    auto inv_vertice_map = inverse_map(vertice_map);
+    vertice_map = get_vertice_map(radius_file);
+    inv_vertice_map = inverse_map(vertice_map);
     auto t_len = chain_file_list.size();
     long v_index = 0;
-   
+    if (world.size() > t_len + 1)
+    {
+      BOOST_LOG_TRIVIAL(error) << "Too many processes (" << world.size()
+                               << ") for the number of jobs!\n";
+      BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
+      return 0;
+    }
+
     //std::atomic<long> index{0};
     //double percent{0.0};
     results.resize(t_len);
     std::vector<boost::mpi::request> reqs(world.size());
 
-    for (int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
+    for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
     {
-      Job job{chain_file_list.front(), vertice_map};
+  
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
-                              << " to SLAVE " << dst_rank << "\n";
-      world.isend(dst_rank, 0, job);
+                              << " to SLAVE (first loop) " << dst_rank << "\n";
+      world.isend(dst_rank, 10, chain_file_list.front());
+      //world.isend(dst_rank, 20, job.v_map);
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs[dst_rank] = world.irecv(dst_rank, 0, results[v_index++]);
+      reqs[dst_rank - 1] = world.irecv(dst_rank, 1, results[v_index++]);
     }
 
     while (chain_file_list.size() > 0)
     {
       bool stop;
-      for (int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
+      for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
       {
         // Check if dst_rank is done
-        if (reqs[dst_rank].test())
+        if (reqs[dst_rank - 1].test())
         {
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
           if (chain_file_list.size() > 0)
           {
             // Tell the slave that a new job is coming.
-            Job job{chain_file_list.front(), vertice_map};
             stop = false;
-            world.isend(dst_rank, 0, stop);
+            world.isend(dst_rank, 1, stop);
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                      << ") to SLAVE " << dst_rank << ".\n";
-            world.isend(dst_rank, 0, job);
+                                    << ") to SLAVE " << dst_rank << ".\n";
+            world.isend(dst_rank, 10, chain_file_list.front());
+            //world.isend(dst_rank, 20, job.v_map);
+            //world.isend(dst_rank, 0,0);
             chain_file_list.pop_front();
-            reqs[dst_rank] = world.irecv(dst_rank, 0, results[v_index++]);
+            reqs[dst_rank - 1] = world.irecv(dst_rank, 1, results[v_index++]);
           }
           else
           {
             // Send stop message to slave.
             stop = true;
-            world.isend(dst_rank, 0, stop);
+            world.isend(dst_rank, 2, stop);
           }
         }
       }
@@ -128,24 +142,27 @@ int main(int argc, char **argv)
     }
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
 
-     // Listen for the remaining jobs, and send stop messages on completion.
+    // Listen for the remaining jobs, and send stop messages on completion.
     bool all_done = false;
-    while (!all_done) {
+    while (!all_done)
+    {
       all_done = true;
-      for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank) {
-        if (reqs[dst_rank].test()) {
-            // Tell the slave that it can exit.
-            bool stop = true;
-            world.isend(dst_rank, 0, stop);
+      for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
+      {
+        if (reqs[dst_rank - 1].test())
+        {
+          // Tell the slave that it can exit.
+          bool stop = true;
+          world.isend(dst_rank, 2, stop);
         }
-        else {
+        else
+        {
           all_done = false;
         }
       }
       usleep(1000);
     }
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Handled all jobs, killed every process.\n";
-
 
     /*
   for (std::size_t i = 0; i < chain_file_list.size(); ++i)
@@ -159,34 +176,41 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info) << percent << "% (" << index << " of " << t_len << ") done";
   }
   */
-  } else {
+  }
+  broadcast(world, vertice_map, 0);
+
+  if(world.rank() != MASTER)
+  {
 
     bool stop = false;
-    while(!stop) {
-      // Wait for new job
-      Job job;
-      world.recv(0, 0, job);
+    while (!stop)
+    {
+      std::string file;
+      std::map<std::string, int> v_map;
+      BOOST_LOG_TRIVIAL(info) << "Initialized Job";
+      world.recv(0, 10, file);
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
-                << "] Received job " << " from MASTER.\n";
+                              << "] Received job "
+                              << " from MASTER.\n";
       // Perform "job"
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: "<< world.rank() 
-                << "Start Job\n";
-      Graph mygraph(job.file, job.v_map);
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
+                              << "Start Job\n";
+      Graph mygraph(file, vertice_map);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Notify master that the job is done
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank() 
-                << "] Done with job " << ". Notifying MASTER.\n";
-      world.send(0, 0, res);
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
+                              << "] Done with job "
+                              << ". Notifying MASTER.\n";
+      world.send(0, 1, res);
       // Check if a new job is coming
-      world.recv(0, 0, stop);
+      world.recv(0, 2, stop);
     }
 
-  BOOST_LOG_TRIVIAL(info) << "~~~~~~~~ Rank " << world.rank() << " is exiting ~~~~~~~~~~~\n";
-
-
+    BOOST_LOG_TRIVIAL(info) << "~~~~~~~~ Rank " << world.rank() << " is exiting ~~~~~~~~~~~\n";
   }
-  if (world.rank() == MASTER){
+  if (world.rank() == MASTER)
+  {
     std::sort(results.begin(), results.end(), cmp_ts);
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
     write_ts_header(ts_mean_file, runningConf);

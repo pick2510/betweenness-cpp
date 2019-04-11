@@ -7,6 +7,7 @@
 #include <cmath>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/map.hpp>
+#include <boost/serialization/string.hpp>
 
 
 typedef struct {
@@ -59,13 +60,13 @@ public:
 typedef struct {
 private:
     friend class boost::serialization::access;
+public:
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
         ar &file;
         ar &v_map;
     }
-public:
     std::string file;
     std::map<std::string, int> v_map;
 } Job;
