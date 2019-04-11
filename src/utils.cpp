@@ -5,6 +5,7 @@
 #include <map>
 #include <glob.h>
 #include <string.h>
+#include <deque>
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
@@ -47,6 +48,40 @@ std::vector<std::string> glob(const std::string &pattern)
     // done
     return filenames;
 }
+
+std::deque<std::string> glob_deq(const std::string &pattern)
+{
+    using namespace std;
+
+    // glob struct resides on the stack
+    glob_t glob_result;
+    memset(&glob_result, 0, sizeof(glob_result));
+
+    // do the glob operation
+    int return_value = glob(pattern.c_str(), GLOB_TILDE, NULL, &glob_result);
+    deque<string> filenames;
+    if (return_value == 0)
+    {
+        for (size_t i = 0; i < glob_result.gl_pathc; ++i)
+        {
+            filenames.push_back(string(glob_result.gl_pathv[i]));
+        }
+    }
+    else if (return_value == 1 || return_value == 2)
+    {
+        globfree(&glob_result);
+        stringstream ss;
+        ss << "glob() failed with return_value " << return_value << endl;
+        throw std::runtime_error(ss.str());
+    }
+
+    // cleanup
+    globfree(&glob_result);
+
+    // done
+    return filenames;
+}
+
 
 bool cmp_ts(const Result &a, const Result &b)
 {
