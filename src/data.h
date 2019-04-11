@@ -57,19 +57,6 @@ public:
   
 } Result;
 
-typedef struct {
-private:
-    friend class boost::serialization::access;
-public:
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
-        ar &file;
-        ar &v_map;
-    }
-    std::string file;
-    std::map<std::string, int> v_map;
-} Job;
 
 #endif
 
