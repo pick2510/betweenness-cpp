@@ -50,4 +50,27 @@ std::map<V,K> inverse_map(std::map<K,V> &map)
 
 
 
+template <typename K,typename V>
+std::vector<K> getKeys (std::map<K,V> &map){
+    std::vector<K> keys;
+    for (auto &kv: map){
+        keys.push_back(kv.first);
+    }
+    return keys;
+}
+
+template <typename K,typename V>
+std::vector<V> getVals (std::map<K,V> &map){
+    std::vector<V> vals;
+    for (auto &kv: map){
+        vals.push_back(kv.second);
+    }
+    return vals;
+}
+
+
+
+
+
+
 #endif

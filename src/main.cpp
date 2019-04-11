@@ -22,6 +22,7 @@
 #include <boost/mpi/status.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/serialization/string.hpp>
 
 constexpr int MASTER = 0;
 
@@ -79,6 +80,8 @@ int main(int argc, char **argv)
     auto lookup_table = get_lookup_table(radius_file);
     vertice_map = get_vertice_map(radius_file);
     inv_vertice_map = inverse_map(vertice_map);
+    auto keys = getKeys(vertice_map);
+    auto vals = getVals(vertice_map);
     auto t_len = chain_file_list.size();
     long v_index = 0;
     if (world.size() > t_len + 1)
@@ -99,7 +102,10 @@ int main(int argc, char **argv)
   
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
                               << " to SLAVE (first loop) " << dst_rank << "\n";
-      world.isend(dst_rank, 10, chain_file_list.front());
+      std::string file {chain_file_list.front() };
+      world.isend(dst_rank, 10, file);
+      world.isend(dst_rank, 20, keys);
+      world.isend(dst_rank, 30, vals);
       //world.isend(dst_rank, 20, job.v_map);
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
@@ -124,9 +130,10 @@ int main(int argc, char **argv)
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
                                     << ") to SLAVE " << dst_rank << ".\n";
-            world.isend(dst_rank, 10, chain_file_list.front());
-            //world.isend(dst_rank, 20, job.v_map);
-            //world.isend(dst_rank, 0,0);
+            std::string file {chain_file_list.front() };
+            world.isend(dst_rank, 10, file);
+            world.isend(dst_rank, 20, keys);
+            world.isend(dst_rank, 30, vals);
             chain_file_list.pop_front();
             reqs[dst_rank - 1] = world.irecv(dst_rank, 1, results[v_index++]);
           }
@@ -177,7 +184,7 @@ int main(int argc, char **argv)
   }
   */
   }
-  broadcast(world, vertice_map, 0);
+  //broadcast(world, vertice_map, 0);
 
   if(world.rank() != MASTER)
   {
@@ -186,16 +193,25 @@ int main(int argc, char **argv)
     while (!stop)
     {
       std::string file;
-      std::map<std::string, int> v_map;
+      std::vector<std::string> keys;
+      std::vector<int> vals;
+      
       BOOST_LOG_TRIVIAL(info) << "Initialized Job";
       world.recv(0, 10, file);
+      world.recv(0, 20, keys);
+      world.recv(0, 30, vals);
+      std::map<std::string, int> v_map;
+      std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b)
+      {
+        return std::make_pair(a, b);
+      });
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Received job "
                               << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "Start Job\n";
-      Graph mygraph(file, vertice_map);
+      Graph mygraph(file, v_map);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Notify master that the job is done
