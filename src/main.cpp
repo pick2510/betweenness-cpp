@@ -25,6 +25,7 @@
 #include <boost/serialization/string.hpp>
 
 constexpr int MASTER = 0;
+constexpr int TAG_BREAK = 2;
 
 int main(int argc, char **argv)
 {
@@ -34,6 +35,10 @@ int main(int argc, char **argv)
   Config runningConf;
   std::map<int, std::string> inv_vertice_map;
   std::map<std::string, int> vertice_map;
+  std::vector<std::string> keys;
+  std::vector<int> vals;
+  std::vector<std::string> radius_file_list;
+  std::deque<std::string> chain_file_list;
 
   if (world.rank() == MASTER)
   {
@@ -60,9 +65,22 @@ int main(int argc, char **argv)
     std::string xyzpattern(runningConf.InputPath + "/*.tet");
     xyzpattern = trim(xyzpattern);
     chainpattern = trim(chainpattern);
-    auto chain_file_list = glob_deq(chainpattern);
-    std::vector<std::string> radius_file_list = glob(xyzpattern);
+    chain_file_list = glob_deq(chainpattern);
+    radius_file_list = glob(xyzpattern);
+    auto radius_file = read_file(radius_file_list[0]);
+    radius_file.pop_back();
+    std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
+    auto lookup_table = get_lookup_table(radius_file);
+    vertice_map = get_vertice_map(radius_file);
+    inv_vertice_map = inverse_map(vertice_map);
+    keys = getKeys(vertice_map);
+    vals = getVals(vertice_map);
+  }
+  broadcast(world, keys, 0);
+  broadcast(world, vals, 0);
 
+  if (world.rank() == MASTER)
+  {
     // sanity check of file list
 
     if (radius_file_list.empty())
@@ -74,14 +92,7 @@ int main(int argc, char **argv)
 
     // Read one radius file, create lookup table for continous particle ids.
     // Create
-    auto radius_file = read_file(radius_file_list[0]);
-    radius_file.pop_back();
-    std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
-    auto lookup_table = get_lookup_table(radius_file);
-    vertice_map = get_vertice_map(radius_file);
-    inv_vertice_map = inverse_map(vertice_map);
-    auto keys = getKeys(vertice_map);
-    auto vals = getVals(vertice_map);
+
     auto t_len = chain_file_list.size();
     long v_index = 0;
     if (world.size() > t_len + 1)
@@ -99,13 +110,11 @@ int main(int argc, char **argv)
 
     for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
     {
-  
+
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
                               << " to SLAVE (first loop) " << dst_rank << "\n";
-      std::string file {chain_file_list.front() };
+      std::string file{chain_file_list.front()};
       world.isend(dst_rank, 10, file);
-      world.isend(dst_rank, 20, keys);
-      world.isend(dst_rank, 30, vals);
       //world.isend(dst_rank, 20, job.v_map);
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
@@ -126,14 +135,12 @@ int main(int argc, char **argv)
           {
             // Tell the slave that a new job is coming.
             stop = false;
-            world.isend(dst_rank, 2, stop);
+            world.isend(dst_rank, TAG_BREAK, stop);
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
                                     << ") to SLAVE " << dst_rank << ".\n";
-            std::string file {chain_file_list.front() };
+            std::string file{chain_file_list.front()};
             world.isend(dst_rank, 10, file);
-            world.isend(dst_rank, 20, keys);
-            world.isend(dst_rank, 30, vals);
             chain_file_list.pop_front();
             reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
           }
@@ -141,7 +148,7 @@ int main(int argc, char **argv)
           {
             // Send stop message to slave.
             stop = true;
-            world.isend(dst_rank, 2, stop);
+            world.isend(dst_rank, TAG_BREAK, stop);
           }
         }
       }
@@ -160,7 +167,7 @@ int main(int argc, char **argv)
         {
           // Tell the slave that it can exit.
           bool stop = true;
-          world.isend(dst_rank, 2, stop);
+          world.isend(dst_rank, TAG_BREAK, stop);
         }
         else
         {
@@ -184,27 +191,23 @@ int main(int argc, char **argv)
   }
   */
   }
-  //broadcast(world, vertice_map, 0);
 
-  else
+  if (world.rank() != MASTER)
   {
-
+    std::map<std::string, int> v_map;
+      std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b) {
+        return std::make_pair(a, b);
+    });
     bool stop = false;
     while (!stop)
     {
       std::string file;
-      std::vector<std::string> keys;
-      std::vector<int> vals;
-      
+
       BOOST_LOG_TRIVIAL(info) << "Initialized Job";
       world.recv(0, 10, file);
-      world.recv(0, 20, keys);
-      world.recv(0, 30, vals);
-      std::map<std::string, int> v_map;
-      std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b)
-      {
-        return std::make_pair(a, b);
-      });
+
+      
+      BOOST_LOG_TRIVIAL(info) << "SIZE: " << keys.size() << "Vals: " << vals.size();
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Received job "
                               << " from MASTER.\n";
@@ -220,7 +223,7 @@ int main(int argc, char **argv)
                               << ". Notifying MASTER.\n";
       world.send(0, 1, res);
       // Check if a new job is coming
-      world.recv(0, 2, stop);
+      world.recv(0, TAG_BREAK, stop);
     }
 
     BOOST_LOG_TRIVIAL(info) << "~~~~~~~~ Rank " << world.rank() << " is exiting ~~~~~~~~~~~\n";
