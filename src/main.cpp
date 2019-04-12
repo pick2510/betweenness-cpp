@@ -25,10 +25,14 @@
 #include <boost/serialization/string.hpp>
 
 constexpr int MASTER = 0;
+constexpr int TAG_RESULT = 1;
 constexpr int TAG_BREAK = 2;
+constexpr int TAG_FILE = 10;
+
 
 int main(int argc, char **argv)
 {
+  //Initialize global object
   boost::mpi::environment env{argc, argv};
   boost::mpi::communicator world;
   std::vector<Result> results;
@@ -42,7 +46,7 @@ int main(int argc, char **argv)
 
   if (world.rank() == MASTER)
   {
-
+    //( )
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
     BOOST_LOG_TRIVIAL(info) << "using BOOST Graph Library";
@@ -76,8 +80,10 @@ int main(int argc, char **argv)
     keys = getKeys(vertice_map);
     vals = getVals(vertice_map);
   }
-  broadcast(world, keys, 0);
-  broadcast(world, vals, 0);
+
+  //Broadcast keys and vals vector for vertice_map reconstruction.
+  broadcast(world, keys, MASTER);
+  broadcast(world, vals, MASTER);
 
   if (world.rank() == MASTER)
   {
@@ -90,11 +96,8 @@ int main(int argc, char **argv)
     }
     SI::natural::sort(chain_file_list);
 
-    // Read one radius file, create lookup table for continous particle ids.
-    // Create
-
     auto t_len = chain_file_list.size();
-    long v_index = 0;
+    //Check that processes are <= length of tasks
     if (world.size() > t_len + 1)
     {
       BOOST_LOG_TRIVIAL(error) << "Too many processes (" << world.size()
@@ -102,9 +105,7 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
       return 0;
     }
-
-    //std::atomic<long> index{0};
-    //double percent{0.0};
+    long v_index = 0;
     results.resize(t_len);
     std::vector<boost::mpi::request> reqs(world.size());
 
@@ -112,13 +113,12 @@ int main(int argc, char **argv)
     {
       std::string file{chain_file_list.front()};
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
-                              << file <<" to SLAVE (first loop) " << dst_rank << "\n";
-      
-      world.isend(dst_rank, 10, file);
-      //world.isend(dst_rank, 20, job.v_map);
+                              << file << " to SLAVE (first loop) " << dst_rank << "\n";
+
+      world.isend(dst_rank, TAG_FILE, file);
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
+      reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
 
     while (chain_file_list.size() > 0)
@@ -139,11 +139,11 @@ int main(int argc, char **argv)
             std::string file{chain_file_list.front()};
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                    <<  file << ") to SLAVE " << dst_rank << ".\n";
-            
-            world.isend(dst_rank, 10, file);
+                                    << file << ") to SLAVE " << dst_rank << ".\n";
+
+            world.isend(dst_rank, TAG_FILE, file);
             chain_file_list.pop_front();
-            reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
+            reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
           }
           else
           {
@@ -178,26 +178,14 @@ int main(int argc, char **argv)
       usleep(1000);
     }
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Handled all jobs, killed every process.\n";
-
-    /*
-  for (std::size_t i = 0; i < chain_file_list.size(); ++i)
-  {
-    Graph mygraph(chain_file_list[i], vertice_map);
-    mygraph.calc();
-
-    results.push_back(mygraph.get_result());
-    index++;
-    percent = (index / t_len) * 100;
-    BOOST_LOG_TRIVIAL(info) << percent << "% (" << index << " of " << t_len << ") done";
   }
-  */
-  }
-
+  // SLAVE CODE
   if (world.rank() != MASTER)
   {
+    //Generate Map from string and int vector
     std::map<std::string, int> v_map;
-      std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b) {
-        return std::make_pair(a, b);
+    std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b) {
+      return std::make_pair(a, b);
     });
     bool stop = false;
     while (!stop)
@@ -205,28 +193,27 @@ int main(int argc, char **argv)
       std::string file;
 
       BOOST_LOG_TRIVIAL(info) << "Initialized Job";
-      world.recv(0, 10, file);
+      world.recv(0, TAG_FILE, file);
 
-      
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Received job "
-                              <<  file << " from MASTER.\n";
+                              << file << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
-                              << "Start Job\n";
+                              << "] Start Job\n";
       Graph mygraph(file, v_map);
       mygraph.calc();
       auto res = mygraph.get_result();
-      // Notify master that the job is done
+      // Send result
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Done with job "
-                              << file << ". Notifying MASTER.\n";
-      world.send(0, 1, res);
+                              << file << ". Send Result.\n";
+      world.send(0, TAG_RESULT, res);
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
     }
 
-    BOOST_LOG_TRIVIAL(info) << "~~~~~~~~ Rank " << world.rank() << " is exiting ~~~~~~~~~~~\n";
+    BOOST_LOG_TRIVIAL(info) << "Rank " << world.rank() << " is exiting\n";
   }
   if (world.rank() == MASTER)
   {
