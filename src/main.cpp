@@ -110,10 +110,10 @@ int main(int argc, char **argv)
 
     for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
     {
-
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
-                              << " to SLAVE (first loop) " << dst_rank << "\n";
       std::string file{chain_file_list.front()};
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
+                              << file <<" to SLAVE (first loop) " << dst_rank << "\n";
+      
       world.isend(dst_rank, 10, file);
       //world.isend(dst_rank, 20, job.v_map);
       chain_file_list.pop_front();
@@ -136,10 +136,11 @@ int main(int argc, char **argv)
             // Tell the slave that a new job is coming.
             stop = false;
             world.isend(dst_rank, TAG_BREAK, stop);
+            std::string file{chain_file_list.front()};
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                    << ") to SLAVE " << dst_rank << ".\n";
-            std::string file{chain_file_list.front()};
+                                    <<  file << ") to SLAVE " << dst_rank << ".\n";
+            
             world.isend(dst_rank, 10, file);
             chain_file_list.pop_front();
             reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
@@ -207,10 +208,9 @@ int main(int argc, char **argv)
       world.recv(0, 10, file);
 
       
-      BOOST_LOG_TRIVIAL(info) << "SIZE: " << keys.size() << "Vals: " << vals.size();
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Received job "
-                              << " from MASTER.\n";
+                              <<  file << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "Start Job\n";
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
       // Notify master that the job is done
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Done with job "
-                              << ". Notifying MASTER.\n";
+                              << file << ". Notifying MASTER.\n";
       world.send(0, 1, res);
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
