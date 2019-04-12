@@ -109,7 +109,7 @@ int main(int argc, char **argv)
       //world.isend(dst_rank, 20, job.v_map);
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs[dst_rank - 1] = world.irecv(dst_rank, 1, results[v_index++]);
+      reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
     }
 
     while (chain_file_list.size() > 0)
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
       for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
       {
         // Check if dst_rank is done
-        if (reqs[dst_rank - 1].test())
+        if (reqs[dst_rank].test())
         {
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
             world.isend(dst_rank, 20, keys);
             world.isend(dst_rank, 30, vals);
             chain_file_list.pop_front();
-            reqs[dst_rank - 1] = world.irecv(dst_rank, 1, results[v_index++]);
+            reqs[dst_rank] = world.irecv(dst_rank, 1, results[v_index++]);
           }
           else
           {
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
       all_done = true;
       for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
       {
-        if (reqs[dst_rank - 1].test())
+        if (reqs[dst_rank].test())
         {
           // Tell the slave that it can exit.
           bool stop = true;
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
   }
   //broadcast(world, vertice_map, 0);
 
-  if(world.rank() != MASTER)
+  else
   {
 
     bool stop = false;
