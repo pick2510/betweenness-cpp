@@ -126,7 +126,7 @@ int main(int argc, char **argv)
           {
             // Tell the slave that a new job is coming.
             stop = false;
-            world.isend(dst_rank, 1, stop);
+            world.isend(dst_rank, 2, stop);
             // Send the new job.
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
                                     << ") to SLAVE " << dst_rank << ".\n";
