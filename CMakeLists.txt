@@ -16,7 +16,7 @@ endif()
 
 set(Boost_USE_STATIC_LIBS        ON) # only find static libs
 set(Boost_USE_MULTITHREADED      ON)
-set(Boost_USE_STATIC_RUNTIME    OFF)
+set(Boost_USE_STATIC_RUNTIME    ON)
 set(Boost_NO_BOOST_CMAKE    OFF)
 find_package(Boost COMPONENTS log_setup log serialization mpi)
 include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH})

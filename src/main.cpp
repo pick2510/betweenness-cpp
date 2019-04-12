@@ -23,6 +23,7 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/serialization/vector.hpp>
 
 constexpr int MASTER = 0;
 constexpr int TAG_RESULT = 1;
