@@ -30,7 +30,6 @@ constexpr int TAG_RESULT = 1;
 constexpr int TAG_BREAK = 2;
 constexpr int TAG_FILE = 10;
 
-
 int main(int argc, char **argv)
 {
   //Initialize global object
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
 
   if (world.rank() == MASTER)
   {
-    //( )
+    //MASTER CODE
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
     BOOST_LOG_TRIVIAL(info) << "using BOOST Graph Library";
