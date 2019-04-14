@@ -107,6 +107,7 @@ int main(int argc, char **argv)
     }
     long v_index = 0;
     results.resize(t_len);
+    BOOST_LOG_TRIVIAL(info) << "Memory: " << sizeof(results) + sizeof(Result) * results.capacity();
     std::vector<boost::mpi::request> reqs(world.size());
 
     for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
