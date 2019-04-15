@@ -29,9 +29,8 @@ void Graph::calc()
 void Graph::calculate_accumulator()
 {
 
-    for (auto &kv : betweenness_centrality)
-    {
-        acc(kv.second);
+    for (auto &val: vals){
+        acc(val);
     }
     BOOST_LOG_TRIVIAL(info) << "Mean " << boost::accumulators::mean(acc);
 }
@@ -61,16 +60,18 @@ void Graph::calculate_betweenness_centrality()
     BGL_FORALL_VERTICES(vertex, graph, Dump_Graph)
     {
         auto val = c_map[vertex];
-        betweenness_centrality[vertex] = val;
-        v_betweeness.push_back(val);
+        keys.push_back(vertex);
+        vals.push_back(val);
     }
+    v_betweeness.resize(vals.size());
+    std::copy(vals.begin(), vals.end(), v_betweeness.begin());
     std::sort(v_betweeness.begin(), v_betweeness.end());
 
 }
 
 std::map<int, double> Graph::get_centrality_map()
 {
-    return betweenness_centrality;
+    return constructMap(keys, vals);
 }
 
 long Graph::get_timestep()
@@ -86,7 +87,8 @@ double Graph::get_mean()
 Result Graph::get_result()
 {
     Result res;
-    res.b_centrality = betweenness_centrality;
+    res.keys = keys;
+    res.vals = vals;
     res.mean = accumulators::mean(acc);
     res.ts = timestep;
     res.q_090 = get_percentile_vector(v_betweeness, 0.90);

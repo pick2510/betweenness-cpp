@@ -35,7 +35,8 @@ private:
     void serialize(Archive & ar, const unsigned int version)
     {
         ar &ts;
-        ar &b_centrality;
+        ar &keys;
+        ar &vals;
         ar &mean;
         ar &var;
         ar &std;
@@ -46,7 +47,8 @@ private:
     }
 public:
     long ts;
-    std::map<int,double> b_centrality;
+    std::vector<int> keys;
+    std::vector<double> vals;
     double mean;
     double var;
     double std;

@@ -31,7 +31,9 @@ private:
   std::vector<std::vector<std::string>> filecontent;
   Centrality_Map c_map;
   const std::map<std::string, int> &v_map;
-  std::map<int, double> betweenness_centrality;
+  //std::map<int, double> betweenness_centrality;
+  std::vector<int> keys;
+  std::vector<double> vals;
   std::vector<double> v_betweeness;
   Dump_Graph graph;
   long timestep;

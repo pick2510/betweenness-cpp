@@ -193,10 +193,10 @@ int main(int argc, char **argv)
       auto nbytes = status.count<char>();
       char *f_recv = new char[nbytes.get()+1];
       BOOST_LOG_TRIVIAL(info) << "Initialized Job";
-      BOOST_LOG_TRIVIAL(info) << "Recevied " << nbytes.get() << "bytes";
       world.recv(0, TAG_FILE, f_recv, nbytes.get());
+      BOOST_LOG_TRIVIAL(info) << "Recevied " << nbytes.get() << " bytes";
       std::string file(f_recv);
-      delete f_recv;
+      delete[] f_recv;
       BOOST_LOG_TRIVIAL(info) << file;
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
@@ -235,7 +235,8 @@ int main(int argc, char **argv)
       std::ofstream ts_file(runningConf.OutputPath + "/centrality_" + std::to_string(v.ts) + ".csv");
       write_cent_header(ts_file, runningConf);
       ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
-      for (auto &kv : v.b_centrality)
+      auto b_centrality = constructMap(v.keys, v.vals);
+      for (auto &kv : b_centrality)
       {
         ts_file << inv_vertice_map[kv.first] << runningConf.sep << kv.second << "\n";
       }
