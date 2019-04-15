@@ -136,7 +136,7 @@ int main(int argc, char **argv)
           {
             // Tell the slave that a new job is coming.
             stop = false;
-            world.isend(dst_rank, TAG_BREAK, stop);
+            world.send(dst_rank, TAG_BREAK, stop);
             
             // Send the new job.
             std::string file_console{ chain_file_list.front()};
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
           {
             // Send stop message to slave.
             stop = true;
-            world.isend(dst_rank, TAG_BREAK, stop);
+            world.send(dst_rank, TAG_BREAK, stop);
           }
         }
       }
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         {
           // Tell the slave that it can exit.
           bool stop = true;
-          world.isend(dst_rank, TAG_BREAK, stop);
+          world.send(dst_rank, TAG_BREAK, stop);
         }
         else
         {
