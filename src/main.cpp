@@ -112,11 +112,11 @@ int main(int argc, char **argv)
 
     for (unsigned int dst_rank = 1; dst_rank < world.size(); ++dst_rank)
     {
-      std::string file{chain_file_list.front()};
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
-                              << file << " to SLAVE (first loop) " << dst_rank << "\n";
+      std::string file_console{chain_file_list.front()};
+     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
+                              << file_console << " to SLAVE (first loop) " << dst_rank << "\n";
 
-      world.isend(dst_rank, TAG_FILE, file);
+      world.isend(dst_rank, TAG_FILE, chain_file_list.front().data(), chain_file_list.front().size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
@@ -137,12 +137,13 @@ int main(int argc, char **argv)
             // Tell the slave that a new job is coming.
             stop = false;
             world.isend(dst_rank, TAG_BREAK, stop);
-            std::string file{chain_file_list.front()};
+            
             // Send the new job.
+            std::string file_console{ chain_file_list.front()};
             BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                    << file << ") to SLAVE " << dst_rank << ".\n";
+                                    << file_console << ") to SLAVE " << dst_rank << ".\n";
 
-            world.isend(dst_rank, TAG_FILE, file);
+            world.isend(dst_rank, TAG_FILE,  chain_file_list.front().data(), chain_file_list.front().size());
             chain_file_list.pop_front();
             reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
           }
@@ -184,17 +185,19 @@ int main(int argc, char **argv)
   if (world.rank() != MASTER)
   {
     //Generate Map from string and int vector
-    std::map<std::string, int> v_map;
-    std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](std::string a, int b) {
-      return std::make_pair(a, b);
-    });
+    std::map<std::string, int> v_map = constructMap(keys,vals);
     bool stop = false;
     while (!stop)
     {
-      std::string file;
-
+      auto status = world.probe(0, TAG_FILE);
+      auto nbytes = status.count<char>();
+      char *f_recv = new char[nbytes.get()+1];
       BOOST_LOG_TRIVIAL(info) << "Initialized Job";
-      world.recv(0, TAG_FILE, file);
+      BOOST_LOG_TRIVIAL(info) << "Recevied " << nbytes.get() << "bytes";
+      world.recv(0, TAG_FILE, f_recv, nbytes.get());
+      std::string file(f_recv);
+      delete f_recv;
+      BOOST_LOG_TRIVIAL(info) << file;
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << world.rank()
                               << "] Received job "

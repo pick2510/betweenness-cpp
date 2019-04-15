@@ -5,6 +5,7 @@
 #include <map>
 #include <deque>
 #include <vector>
+#include <cassert>
 #include <functional>
 #include <sstream>
 #include <algorithm>
@@ -66,6 +67,26 @@ std::vector<V> getVals (std::map<K,V> &map){
         vals.push_back(kv.second);
     }
     return vals;
+}
+
+template <typename K, typename V>
+std::map<K,V> constructMap(std::vector<K> &keys, std::vector<V> &vals){
+    std::map<K,V> v_map;
+    std::transform(keys.begin(), keys.end(), vals.begin(), std::inserter(v_map, v_map.end()), [](K a, V b) {
+      return std::make_pair(a, b);
+    });
+    return v_map;
+}
+
+
+template <typename K, typename V>
+std::map<V,K> buildMap(std::vector<K> &keys, std::vector<V> &vals){
+    assert(keys.size() == vals.size());
+    std::map<V,K> kvmap;
+    for (int i = 0; i < keys.size(); i++){
+        kvmap[keys[i]] = vals[i];
+    }
+    return kvmap;
 }
 
 
