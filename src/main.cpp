@@ -46,7 +46,6 @@ int main(int argc, char **argv)
   std::vector<Result> results;
   std::vector<std::string> radius_file_list;
   std::deque<std::string> chain_file_list;
-  Result *res_vec;
   auto rank = world.rank();
   auto world_size = world.size();
   gethostname(hostname, HOSTNAME_LEN);
@@ -133,7 +132,8 @@ int main(int argc, char **argv)
     bool stop = false;
     while (chain_file_list.size() > 0)
     {
-      if (auto status = test_any(reqs.begin(), reqs.end()))
+      auto status = test_any(reqs.begin(), reqs.end());
+      if (status)
       {
         auto rank = status.get().first.source();
         BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
