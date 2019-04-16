@@ -132,10 +132,9 @@ int main(int argc, char **argv)
     bool stop = false;
     while (chain_file_list.size() > 0)
     {
-      auto status = test_any(reqs.begin(), reqs.end());
-      if (status.is_initialized())
-      {
-        auto rank = status.get().first.source();
+      auto status = boost::mpi::wait_any(reqs.begin(), reqs.end());
+     
+        auto rank = status.first.source();
         BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
         // Check if there is remaining jobs
 
@@ -152,8 +151,6 @@ int main(int argc, char **argv)
         chain_file_list.pop_front();
         reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
       }
-      usleep(50);
-    }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
