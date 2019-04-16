@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     }
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
-    std::vector<boost::mpi::request> reqs(world_size);
+    std::vector<boost::mpi::request> reqs;
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
     {
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+      reqs.push_back(world.irecv(dst_rank, TAG_RESULT, results[v_index++]));
     }
     bool stop = false;
     while (chain_file_list.size() > 0)
