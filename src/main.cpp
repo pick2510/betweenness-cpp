@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     }
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
-    std::vector<boost::mpi::request> reqs;
+    std::vector<boost::mpi::request> reqs(world_size);
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
     {
@@ -128,31 +128,32 @@ int main(int argc, char **argv)
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs.push_back(world.irecv(dst_rank, TAG_RESULT, results[v_index++]));
+      reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
     bool stop = false;
     while (chain_file_list.size() > 0)
     {
-      auto status = wait_any(reqs.begin(), reqs.end());
-      auto rank = status.first.source();
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
-      // Check if there is remaining jobs
+      if (auto status = test_any(reqs.begin(), reqs.end()))
+      {
+        auto rank = status.get().first.source;
+        BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
+        // Check if there is remaining jobs
 
-      // Tell the slave that a new job is coming.
-      world.send(rank, TAG_BREAK, stop);
+        // Tell the slave that a new job is coming.
+        world.send(rank, TAG_BREAK, stop);
 
-      // Send the new job.
-      std::string file{chain_file_list.front()};
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                              << file << ") to SLAVE " << rank;
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+        // Send the new job.
+        std::string file{chain_file_list.front()};
+        BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
+                                << file << ") to SLAVE " << rank;
+        BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
 
-      world.send(rank, TAG_FILE, file.data(), file.size());
-      chain_file_list.pop_front();
-      reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
+        world.send(rank, TAG_FILE, file.data(), file.size());
+        chain_file_list.pop_front();
+        reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
+      }
+      usleep(100);
     }
-
-
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
