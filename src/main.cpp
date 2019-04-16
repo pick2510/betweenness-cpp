@@ -30,11 +30,12 @@ constexpr int MASTER = 0;
 constexpr int TAG_RESULT = 1;
 constexpr int TAG_BREAK = 2;
 constexpr int TAG_FILE = 10;
+constexpr int HOSTNAME_LEN = 255;
 
 int main(int argc, char **argv)
 {
   //Initialize global object
-  char hostname[255]{};
+  char hostname[HOSTNAME_LEN]{};
   boost::mpi::environment env{argc, argv, false};
   boost::mpi::communicator world;
   Config runningConf;
@@ -48,7 +49,7 @@ int main(int argc, char **argv)
   Result *res_vec;
   auto rank = world.rank();
   auto world_size = world.size();
-  gethostname(hostname, 255);
+  gethostname(hostname, HOSTNAME_LEN);
 
   if (rank == MASTER)
   {
