@@ -133,7 +133,7 @@ int main(int argc, char **argv)
     while (chain_file_list.size() > 0)
     {
       auto status = test_any(reqs.begin(), reqs.end());
-      if (status)
+      if (status.is_initialized())
       {
         auto rank = status.get().first.source();
         BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
