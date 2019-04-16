@@ -72,8 +72,8 @@ int main(int argc, char **argv)
 
     // define pattern fro globbing chain files, trim strings, and glob
 
-    std::string chainpattern(runningConf.InputPath + "/*.chain");
-    std::string xyzpattern(runningConf.InputPath + "/*.tet");
+    std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
+    std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
     xyzpattern = trim(xyzpattern);
     chainpattern = trim(chainpattern);
     chain_file_list = glob_deq(chainpattern);
