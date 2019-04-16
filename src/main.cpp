@@ -141,8 +141,7 @@ int main(int argc, char **argv)
         {
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
-          if (chain_file_list.size() > 0)
-          {
+         
             // Tell the slave that a new job is coming.
             stop = false;
             world.send(dst_rank, TAG_BREAK, stop);
@@ -156,7 +155,6 @@ int main(int argc, char **argv)
             world.send(dst_rank, TAG_FILE, file.data(), file.size());
             chain_file_list.pop_front();
             reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-          }
         }
       }
       usleep(1000);
