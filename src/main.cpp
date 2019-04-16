@@ -168,9 +168,13 @@ int main(int argc, char **argv)
       usleep(1000);
     }
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
-
+    wait_all(reqs.begin(), reqs.end());
+    for (int dst_rank = 1; dst_rank < world_size; ++dst_rank){
+       bool stop = true;
+       world.send(dst_rank, TAG_BREAK, stop);
+    }
     // Listen for the remaining jobs, and send stop messages on completion.
-    bool all_done = false;
+    /*bool all_done = false;
     while (!all_done)
     {
       all_done = true;
@@ -181,14 +185,15 @@ int main(int argc, char **argv)
           // Tell the slave that it can exit.
           bool stop = true;
           world.send(dst_rank, TAG_BREAK, stop);
-        }
+        }w
         else
         {
           all_done = false;
         }
       }
       usleep(1000);
-    }
+    }*/
+
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Handled all jobs, killed every process.\n";
   }
   // SLAVE CODE
