@@ -157,12 +157,6 @@ int main(int argc, char **argv)
             chain_file_list.pop_front();
             reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
           }
-          else
-          {
-            // Send stop message to slave.
-            stop = true;
-            world.send(dst_rank, TAG_BREAK, stop);
-          }
         }
       }
       usleep(1000);
