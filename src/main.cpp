@@ -124,6 +124,7 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job "
                               << file << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] " << (v_index / t_len) * 100 << "% done";
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
                                   << file << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] " << (v_index / t_len) * 100 << "% done";
           world.send(dst_rank, TAG_FILE, file.data(), file.size());
           chain_file_list.pop_front();
           reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
