@@ -132,32 +132,30 @@ int main(int argc, char **argv)
     bool stop = false;
     while (chain_file_list.size() > 0)
     {
-        for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
+      for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
       {
         // Check if dst_rank is done
         if (reqs[dst_rank].test())
         {
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
-         
-            // Tell the slave that a new job is coming.
-            stop = false;
-            world.send(dst_rank, TAG_BREAK, stop);
 
-            // Send the new job.
-            std::string file{chain_file_list.front()};
-            BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                    << file << ") to SLAVE " << dst_rank;
-             BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+          // Tell the slave that a new job is coming.
+          world.send(dst_rank, TAG_BREAK, stop);
 
-            world.send(dst_rank, TAG_FILE, file.data(), file.size());
-            chain_file_list.pop_front();
-            reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+          // Send the new job.
+          std::string file{chain_file_list.front()};
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
+                                  << file << ") to SLAVE " << dst_rank;
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+
+          world.send(dst_rank, TAG_FILE, file.data(), file.size());
+          chain_file_list.pop_front();
+          reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
         }
       }
       usleep(1000);
-      
-  }
+    }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
@@ -166,26 +164,7 @@ int main(int argc, char **argv)
     {
       world.send(dst_rank, TAG_BREAK, stop);
     }
-    // Listen for the remaining jobs, and send stop messages on completion.
-    /*bool all_done = false;
-    while (!all_done)
-    {
-      all_done = true;
-      for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
-      {
-        if (reqs[dst_rank].test())
-        {
-          // Tell the slave that it can exit.
-          bool stop = true;
-          world.send(dst_rank, TAG_BREAK, stop);
-        }w
-        else
-        {
-          all_done = false;
-        }
-      }
-      usleep(1000);
-    }*/
+    
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Handled all jobs, killed every process.\n";
   }
