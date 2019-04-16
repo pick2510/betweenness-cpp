@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     {
       if (auto status = test_any(reqs.begin(), reqs.end()))
       {
-        auto rank = status.get().first.source;
+        auto rank = status.get().first.source();
         BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
         // Check if there is remaining jobs
 
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
         chain_file_list.pop_front();
         reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
       }
-      usleep(100);
+      usleep(50);
     }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
