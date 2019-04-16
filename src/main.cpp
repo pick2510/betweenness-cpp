@@ -86,7 +86,7 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
     }
     auto radius_file = read_file(radius_file_list[0]);
-    
+
     radius_file.pop_back();
     std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
     auto lookup_table = get_lookup_table(radius_file);
@@ -130,40 +130,33 @@ int main(int argc, char **argv)
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
-
+    bool stop = false;
     while (chain_file_list.size() > 0)
     {
-      bool stop;
-      for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
-      {
-        // Check if dst_rank is done
-        if (reqs[dst_rank].test())
-        {
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
-          // Check if there is remaining jobs
-         
-            // Tell the slave that a new job is coming.
-            stop = false;
-            world.send(dst_rank, TAG_BREAK, stop);
+      auto status = wait_any(reqs.begin(), reqs.end());
+      auto rank = status.first.source();
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
+      // Check if there is remaining jobs
 
-            // Send the new job.
-            std::string file{chain_file_list.front()};
-            BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                    << file << ") to SLAVE " << dst_rank;
-             BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+      // Tell the slave that a new job is coming.
+      world.send(rank, TAG_BREAK, stop);
 
-            world.send(dst_rank, TAG_FILE, file.data(), file.size());
-            chain_file_list.pop_front();
-            reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-        }
-      }
-      usleep(1000);
+      // Send the new job.
+      std::string file{chain_file_list.front()};
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
+                              << file << ") to SLAVE " << rank;
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+
+      world.send(rank, TAG_FILE, file.data(), file.size());
+      chain_file_list.pop_front();
+      reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
     }
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
-    for (int dst_rank = 1; dst_rank < world_size; ++dst_rank){
-       bool stop = true;
-       world.send(dst_rank, TAG_BREAK, stop);
+    for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
+    {
+      stop = true;
+      world.send(dst_rank, TAG_BREAK, stop);
     }
     // Listen for the remaining jobs, and send stop messages on completion.
     /*bool all_done = false;
@@ -203,7 +196,7 @@ int main(int argc, char **argv)
                               << "] (" << hostname << ") Intialized JOB";
       world.recv(0, TAG_FILE, f_recv, nbytes.get());
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank
-                              << "] (" << hostname << ") Recevied: " 
+                              << "] (" << hostname << ") Recevied: "
                               << nbytes.get() << " bytes";
       std::string file(f_recv);
       delete[] f_recv;
@@ -229,12 +222,13 @@ int main(int argc, char **argv)
 
     BOOST_LOG_TRIVIAL(info) << "Rank " << rank << " is exiting\n";
   }
-  if (rank == MASTER){
+  if (rank == MASTER)
+  {
     std::sort(results.begin(), results.end(), cmp_ts);
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
-   
+
     for (auto &v : results)
     {
       ts_mean_file << std::to_string(v.ts) << runningConf.sep << std::to_string(v.mean)
