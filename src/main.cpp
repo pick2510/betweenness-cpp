@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 {
   //Initialize global object
   char hostname[HOSTNAME_LEN]{};
-  boost::mpi::environment env{argc, argv, false};
+  boost::mpi::environment env{argc, argv};
   boost::mpi::communicator world;
   Config runningConf;
   std::map<int, std::string> inv_vertice_map;
@@ -151,11 +151,14 @@ int main(int argc, char **argv)
       chain_file_list.pop_front();
       reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
     }
+
+
+
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
+    stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
     {
-      stop = true;
       world.send(dst_rank, TAG_BREAK, stop);
     }
     // Listen for the remaining jobs, and send stop messages on completion.
