@@ -132,25 +132,32 @@ int main(int argc, char **argv)
     bool stop = false;
     while (chain_file_list.size() > 0)
     {
-      auto status = boost::mpi::wait_any(reqs.begin(), reqs.end());
-     
-        auto rank = status.first.source();
-        BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << rank << " is done.\n";
-        // Check if there is remaining jobs
+        for (int dst_rank = 1; dst_rank < world_size; ++dst_rank)
+      {
+        // Check if dst_rank is done
+        if (reqs[dst_rank].test())
+        {
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
+          // Check if there is remaining jobs
+         
+            // Tell the slave that a new job is coming.
+            stop = false;
+            world.send(dst_rank, TAG_BREAK, stop);
 
-        // Tell the slave that a new job is coming.
-        world.send(rank, TAG_BREAK, stop);
+            // Send the new job.
+            std::string file{chain_file_list.front()};
+            BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
+                                    << file << ") to SLAVE " << dst_rank;
+             BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
 
-        // Send the new job.
-        std::string file{chain_file_list.front()};
-        BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job ("
-                                << file << ") to SLAVE " << rank;
-        BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-
-        world.send(rank, TAG_FILE, file.data(), file.size());
-        chain_file_list.pop_front();
-        reqs[rank] = world.irecv(rank, TAG_RESULT, results[v_index++]);
+            world.send(dst_rank, TAG_FILE, file.data(), file.size());
+            chain_file_list.pop_front();
+            reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+        }
       }
+      usleep(1000);
+      
+  }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs.begin(), reqs.end());
