@@ -137,8 +137,8 @@ int main(int argc, char **argv)
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank - 1] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank - 1] = tscom.irecv(dst_rank, TAG_PART_TS,
-                                      &ts_particle[v_index++ * p_size], p_size);
+      reqs_ts[dst_rank - 1] = tscom.irecv(
+          dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
           chain_file_list.pop_front();
           reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-          reqs_ts[dst_rank- 1] = tscom.irecv(
+          reqs_ts[dst_rank - 1] = tscom.irecv(
               dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
         }
       }
