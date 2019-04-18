@@ -24,6 +24,7 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
+#include <Eigen/Eigen>
 #include <unistd.h>
 
 constexpr int MASTER = 0;
@@ -50,6 +51,7 @@ int main(int argc, char **argv)
   double *ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
+  int t_len;
   gethostname(hostname, HOSTNAME_LEN);
 
   if (rank == MASTER) {
@@ -97,10 +99,13 @@ int main(int argc, char **argv)
   broadcast(world, keys, MASTER);
   broadcast(world, vals, MASTER);
 
+
+  //MASTER CODE
+
   if (rank == MASTER) {
     // sanity check of file list
     SI::natural::sort(chain_file_list);
-    auto t_len = chain_file_list.size();
+    t_len = chain_file_list.size();
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
     results.resize(chain_file_list.size());
     auto p_size = vertice_map.size();
@@ -111,7 +116,7 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
       return 0;
     }
-    ts_particle = new double[t_len * p_size];
+    ts_particle = new double[t_len * p_size] {};
     BOOST_LOG_TRIVIAL(info)
         << "Size of ts_particle: " << p_size * t_len * sizeof(double);
     long v_index = 0;
@@ -159,35 +164,7 @@ int main(int argc, char **argv)
       reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
                                       &ts_particle[v_index++ * p_size], p_size);
     }
-    /*while (chain_file_list.size() > 0) {
-      for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
-        // Check if dst_rank is done
-        if (reqs_world[dst_rank].test()) {
-          reqs_ts[dst_rank].wait();
-          BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] Rank " << dst_rank << " is done.\n";
-          // Check if there is remaining jobs
-
-          // Tell the slave that a new job is coming.
-          world.send(dst_rank, TAG_BREAK, stop);
-
-          // Send the new job.
-          std::string file{chain_file_list.front()};
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << file
-                                  << ") to SLAVE " << dst_rank;
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-          BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-          world.send(dst_rank, TAG_FILE, file.data(), file.size());
-          chain_file_list.pop_front();
-          reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT,
-    results[v_index]); reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
-    &ts_particle[v_index++ * p_size], p_size);
-        }
-      }
-      usleep(1000);
-    } */
-
+   
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs_world.begin(), reqs_world.end());
     wait_all(reqs_ts.begin(), reqs_ts.end());
@@ -199,6 +176,9 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info)
         << "[MASTER] Handled all jobs, killed every process.\n";
   }
+  
+  
+  
   // SLAVE CODE
   if (rank > MASTER) {
     // Generate Map from string and int vector
@@ -238,6 +218,9 @@ int main(int argc, char **argv)
 
     BOOST_LOG_TRIVIAL(info) << "Rank " << rank << " is exiting\n";
   }
+  
+  //MASTTER CODE
+  
   if (rank == MASTER) {
     std::sort(results.begin(), results.end(), cmp_ts);
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
@@ -247,6 +230,9 @@ int main(int argc, char **argv)
     output_ts(ts_mean_file, runningConf, results, inv_vertice_map);
     ts_mean_file.flush();
     ts_mean_file.close();
+    BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
+    Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle, t_len, vertice_map.size());
     delete[] ts_particle;
+   
   }
 }

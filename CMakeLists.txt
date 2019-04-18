@@ -18,7 +18,7 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(Boost_NO_BOOST_CMAKE    ON)
 find_package(Boost COMPONENTS log_setup log serialization mpi)
-include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH})
+include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/include)
 
 set (CMAKE_CXX_STANDARD 11)
 
