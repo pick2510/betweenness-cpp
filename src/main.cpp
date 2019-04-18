@@ -31,6 +31,8 @@ constexpr int TAG_RESULT = 1;
 constexpr int TAG_BREAK = 2;
 constexpr int TAG_FILE = 10;
 constexpr int HOSTNAME_LEN = 255;
+constexpr int TAG_PART_TS = 20;
+
 
 int main(int argc, char **argv)
 {
@@ -46,6 +48,7 @@ int main(int argc, char **argv)
   std::vector<Result> results;
   std::vector<std::string> radius_file_list;
   std::deque<std::string> chain_file_list;
+  double *ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
   gethostname(hostname, HOSTNAME_LEN);
@@ -101,6 +104,7 @@ int main(int argc, char **argv)
     auto t_len = chain_file_list.size();
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
     results.resize(chain_file_list.size());
+    auto p_size = vertice_map.size();
     // Check that processes are <= length of tasks
     if (world_size > t_len + 1) {
       BOOST_LOG_TRIVIAL(error) << "Too many processes (" << world_size
@@ -108,9 +112,12 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
       return 0;
     }
+    ts_particle = new double[t_len * p_size];
+    BOOST_LOG_TRIVIAL(info) << "Size of ts_particle: " << p_size * t_len * sizeof(double);
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
-    std::vector<boost::mpi::request> reqs(world_size);
+    std::vector<boost::mpi::request> reqs_world(world_size);
+    std::vector<boost::mpi::request> reqs_ts(reqs_world);
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       std::string file{chain_file_list.front()};
@@ -118,17 +125,19 @@ int main(int argc, char **argv)
                               << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
       BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] " << (v_index / t_len) * 100 << "% done";
+          << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+      reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
       for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
         // Check if dst_rank is done
-        if (reqs[dst_rank].test()) {
+        if (reqs_world[dst_rank].test()) {
+          reqs_ts[dst_rank].wait();
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
@@ -142,18 +151,19 @@ int main(int argc, char **argv)
                                   << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
           BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] " << (v_index / t_len) * 100 << "% done";
+              << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
           world.send(dst_rank, TAG_FILE, file.data(), file.size());
           chain_file_list.pop_front();
-          reqs[dst_rank] =
-              world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+          reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+          reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
         }
       }
       usleep(1000);
     }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
-    wait_all(reqs.begin(), reqs.end());
+    wait_all(reqs_world.begin(), reqs_world.end());
+    wait_all(reqs_ts.begin(), reqs_ts.end());
     stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       world.send(dst_rank, TAG_BREAK, stop);
@@ -193,6 +203,10 @@ int main(int argc, char **argv)
           << "[SLAVE: " << rank << "] (" << hostname << ") Done with job "
           << file << ". Send Result.\n";
       world.send(0, TAG_RESULT, res);
+      world.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
+
+     
+
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
     }
@@ -205,28 +219,9 @@ int main(int argc, char **argv)
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +
                                       1);
-
-    for (auto &v : results) {
-      ts_mean_file << std::to_string(v.ts) << runningConf.sep
-                   << std::to_string(v.mean) << runningConf.sep
-                   << std::to_string(v.var) << runningConf.sep
-                   << std::to_string(std::sqrt(v.var)) << runningConf.sep
-                   << std::to_string(v.skew) << runningConf.sep
-                   << std::to_string(v.kur) << runningConf.sep
-                   << std::to_string(v.q_090) << runningConf.sep
-                   << std::to_string(v.q_099) << "\n";
-      std::ofstream ts_file(runningConf.OutputPath + "/centrality_" +
-                            std::to_string(v.ts) + ".csv");
-      write_cent_header(ts_file, runningConf);
-      ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
-      auto b_centrality = constructMap(v.keys, v.vals);
-      for (auto &kv : b_centrality) {
-        ts_file << inv_vertice_map[kv.first] << runningConf.sep << kv.second
-                << "\n";
-      }
-      ts_file.close();
-    }
+    output_ts(ts_mean_file, runningConf, results, inv_vertice_map);
     ts_mean_file.flush();
     ts_mean_file.close();
+    delete[] ts_particle;
   }
 }

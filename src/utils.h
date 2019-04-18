@@ -6,6 +6,7 @@
 #include <cassert>
 #include <deque>
 #include <functional>
+#include <iomanip>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -27,6 +28,9 @@ void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
 void write_ts_header(std::ofstream &out, Config &conf);
 void write_cent_header(std::ofstream &out, Config &conf);
+void output_ts(std::ofstream &ts_mean_file, Config &runningConf,
+               std::vector<Result> &results,
+               std::map<int, std::string> &inv_vertice_map);
 char *trimwhitespace(char *str);
 
 template <class Container>
@@ -86,6 +90,13 @@ std::map<V, K> buildMap(std::vector<K> &keys, std::vector<V> &vals)
     kvmap[keys[i]] = vals[i];
   }
   return kvmap;
+}
+
+template <typename T> std::string convFillString(T &num, int len)
+{
+  std::ostringstream oss;
+  oss << std::setfill('0') << std::setw(len) << num;
+  return oss.str();
 }
 
 #endif

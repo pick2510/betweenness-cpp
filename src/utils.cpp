@@ -212,3 +212,29 @@ char *trimwhitespace(char *str)
 
   return str;
 }
+
+void output_ts(std::ofstream &ts_mean_file, Config &runningConf,
+               std::vector<Result> &results,
+               std::map<int, std::string> &inv_vertice_map)
+{
+  for (auto &v : results) {
+    ts_mean_file << convFillString(v.ts, 9) << runningConf.sep
+                 << std::to_string(v.mean) << runningConf.sep
+                 << std::to_string(v.var) << runningConf.sep
+                 << std::to_string(std::sqrt(v.var)) << runningConf.sep
+                 << std::to_string(v.skew) << runningConf.sep
+                 << std::to_string(v.kur) << runningConf.sep
+                 << std::to_string(v.q_090) << runningConf.sep
+                 << std::to_string(v.q_099) << "\n";
+    std::ofstream ts_file(runningConf.OutputPath + "/centrality_" +
+                          convFillString(v.ts, 9) + ".csv");
+    write_cent_header(ts_file, runningConf);
+    ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+    auto b_centrality = constructMap(v.keys, v.vals);
+    for (auto &kv : b_centrality) {
+      ts_file << inv_vertice_map[kv.first] << runningConf.sep << kv.second
+              << "\n";
+    }
+    ts_file.close();
+  }
+}
