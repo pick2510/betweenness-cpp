@@ -40,18 +40,18 @@ int main(int argc, char **argv)
   char hostname[HOSTNAME_LEN]{};
   boost::mpi::environment env{argc, argv};
   boost::mpi::communicator world;
-  Config runningConf;
-  std::map<int, std::string> inv_vertice_map;
-  std::map<std::string, int> vertice_map;
-  std::vector<std::string> keys;
-  std::vector<int> vals;
-  std::vector<Result> results;
-  std::vector<std::string> radius_file_list;
-  std::deque<std::string> chain_file_list;
+  Config runningConf{};
+  std::map<int, std::string> inv_vertice_map{};
+  std::map<std::string, int> vertice_map{};
+  std::vector<std::string> keys{};
+  std::vector<int> vals {};
+  std::vector<Result> results {};
+  std::vector<std::string> radius_file_list {};
+  std::deque<std::string> chain_file_list {};
   double *ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
-  int t_len;
+  int t_len{};
   gethostname(hostname, HOSTNAME_LEN);
 
   if (rank == MASTER) {
@@ -232,6 +232,7 @@ int main(int argc, char **argv)
     ts_mean_file.close();
     BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
     Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle, t_len, vertice_map.size());
+
     delete[] ts_particle;
    
   }
