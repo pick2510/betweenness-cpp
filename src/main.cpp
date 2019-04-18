@@ -142,9 +142,9 @@ int main(int argc, char **argv)
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
-      auto status = wait_any(reqs_ts.begin(), reqs_ts.end());
+      auto status = wait_any(reqs_world.begin(), reqs_world.end());
       auto dst_rank = status.first.source();
-      reqs_world[dst_rank].wait();
+      reqs_ts[dst_rank].wait();
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
       // Check if there is remaining jobs
 
