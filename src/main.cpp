@@ -137,33 +137,36 @@ int main(int argc, char **argv)
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] =  tscom.irecv(dst_rank, TAG_PART_TS,
+      reqs_ts[dst_rank] = tscom.irecv(dst_rank, TAG_PART_TS,
                                       &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
-      auto status = wait_any(reqs_world.begin(), reqs_world.end());
-      auto dst_rank = status.first.source();
-      reqs_ts[dst_rank].wait();
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
-      // Check if there is remaining jobs
+      for (unsigned int dst_rank = 0; dst_rank < world_size; dst_rank++) {
+        if (reqs_world[dst_rank].test()) {
+          reqs_ts[dst_rank].wait();
+          BOOST_LOG_TRIVIAL(info)
+              << "[MASTER] Rank " << dst_rank << " is done.\n";
+          // Check if there is remaining jobs
 
-      // Tell the slave that a new job is coming.
-      world.send(dst_rank, TAG_BREAK, stop);
+          // Tell the slave that a new job is coming.
+          world.send(dst_rank, TAG_BREAK, stop);
 
-      // Send the new job.
-      std::string file{chain_file_list.front()};
-      BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] Sending new job (" << file << ") to SLAVE " << dst_rank;
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-      BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-      world.send(dst_rank, TAG_FILE, file.data(), file.size());
-      chain_file_list.pop_front();
-      reqs_world[dst_rank] =
-          world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] = tscom.irecv(dst_rank, TAG_PART_TS,
-                                      &ts_particle[v_index++ * p_size], p_size);
+          // Send the new job.
+          std::string file{chain_file_list.front()};
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << file
+                                  << ") to SLAVE " << dst_rank;
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+          BOOST_LOG_TRIVIAL(info)
+              << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
+          world.send(dst_rank, TAG_FILE, file.data(), file.size());
+          chain_file_list.pop_front();
+          reqs_world[dst_rank] =
+              world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+          reqs_ts[dst_rank] = tscom.irecv(
+              dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
+        }
+      }
     }
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
@@ -223,9 +226,8 @@ int main(int argc, char **argv)
   if (rank == MASTER) {
     std::sort(results.begin(), results.end(), cmp_ts);
     ts.reserve(results.size());
-    std::for_each(results.begin(), results.end(), [&ts] (Result const &res){
-      ts.push_back(res.ts);
-    });
+    std::for_each(results.begin(), results.end(),
+                  [&ts](Result const &res) { ts.push_back(res.ts); });
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +
