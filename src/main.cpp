@@ -33,7 +33,6 @@ constexpr int TAG_FILE = 10;
 constexpr int HOSTNAME_LEN = 255;
 constexpr int TAG_PART_TS = 20;
 
-
 int main(int argc, char **argv)
 {
   // Initialize global object
@@ -113,7 +112,8 @@ int main(int argc, char **argv)
       return 0;
     }
     ts_particle = new double[t_len * p_size];
-    BOOST_LOG_TRIVIAL(info) << "Size of ts_particle: " << p_size * t_len * sizeof(double);
+    BOOST_LOG_TRIVIAL(info)
+        << "Size of ts_particle: " << p_size * t_len * sizeof(double);
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
     std::vector<boost::mpi::request> reqs_world(world_size);
@@ -129,11 +129,37 @@ int main(int argc, char **argv)
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
+      reqs_world[dst_rank] =
+          world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
+                                      &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
+      auto status = wait_any(reqs_world.begin(), reqs_world.end());
+      auto dst_rank = status.first.source();
+      reqs_ts[dst_rank].wait();
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Rank " << dst_rank << " is done.\n";
+      // Check if there is remaining jobs
+
+      // Tell the slave that a new job is coming.
+      world.send(dst_rank, TAG_BREAK, stop);
+
+      // Send the new job.
+      std::string file{chain_file_list.front()};
+      BOOST_LOG_TRIVIAL(info)
+          << "[MASTER] Sending new job (" << file << ") to SLAVE " << dst_rank;
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+      BOOST_LOG_TRIVIAL(info)
+          << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
+      world.send(dst_rank, TAG_FILE, file.data(), file.size());
+      chain_file_list.pop_front();
+      reqs_world[dst_rank] =
+          world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
+                                      &ts_particle[v_index++ * p_size], p_size);
+    }
+    /*while (chain_file_list.size() > 0) {
       for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
         // Check if dst_rank is done
         if (reqs_world[dst_rank].test()) {
@@ -154,12 +180,13 @@ int main(int argc, char **argv)
               << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
           world.send(dst_rank, TAG_FILE, file.data(), file.size());
           chain_file_list.pop_front();
-          reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-          reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
+          reqs_world[dst_rank] = world.irecv(dst_rank, TAG_RESULT,
+    results[v_index]); reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
+    &ts_particle[v_index++ * p_size], p_size);
         }
       }
       usleep(1000);
-    }
+    } */
 
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
     wait_all(reqs_world.begin(), reqs_world.end());
@@ -204,8 +231,6 @@ int main(int argc, char **argv)
           << file << ". Send Result.\n";
       world.send(0, TAG_RESULT, res);
       world.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
-
-     
 
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
