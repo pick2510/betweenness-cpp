@@ -58,4 +58,8 @@ public:
 
 } Result;
 
+
+constexpr char ts_particle_path[] = "particles";
+constexpr char ts_centrality_path[] = "centrality";
+
 #endif

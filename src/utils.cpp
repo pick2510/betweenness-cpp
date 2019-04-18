@@ -12,9 +12,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "main.h"
+
+namespace fs = boost::filesystem;
 
 std::vector<std::string> glob(const std::string &pattern)
 {
@@ -178,7 +181,7 @@ void goto_line(std::ifstream &file, unsigned long n)
   }
 }
 
-void write_ts_header(std::ofstream &out, Config &conf)
+void write_ts_header(std::ofstream &out,const  Config &conf)
 {
 
   out << "ts" << conf.sep << "mean" << conf.sep << "var" << conf.sep << "std"
@@ -187,7 +190,7 @@ void write_ts_header(std::ofstream &out, Config &conf)
       << "\n";
 }
 
-void write_cent_header(std::ofstream &out, Config &conf)
+void write_cent_header(std::ofstream &out, const Config &conf)
 {
   out << "particleid" << conf.sep << "centrality\n";
 }
@@ -213,10 +216,20 @@ char *trimwhitespace(char *str)
   return str;
 }
 
-void output_ts(std::ofstream &ts_mean_file, Config &runningConf,
-               std::vector<Result> &results,
-               std::map<int, std::string> &inv_vertice_map)
+inline void check_path(boost::filesystem::path &path)
 {
+  if (!fs::exists(path)) {
+    fs::create_directories(path);
+  }
+}
+
+void output_centrality_ts(std::ofstream &ts_mean_file,
+                          const Config &runningConf,
+                          const std::vector<Result> &results,
+                          const std::map<int, std::string> &inv_vertice_map)
+{
+  auto p = fs::path(runningConf.OutputPath + "/" + ts_centrality_path);
+  check_path(p);
   for (auto &v : results) {
     ts_mean_file << convFillString(v.ts, 9) << runningConf.sep
                  << std::to_string(v.mean) << runningConf.sep
@@ -226,14 +239,35 @@ void output_ts(std::ofstream &ts_mean_file, Config &runningConf,
                  << std::to_string(v.kur) << runningConf.sep
                  << std::to_string(v.q_090) << runningConf.sep
                  << std::to_string(v.q_099) << "\n";
-    std::ofstream ts_file(runningConf.OutputPath + "/centrality_" +
+    std::ofstream ts_file(p.string() + "/centrality_" +
                           convFillString(v.ts, 9) + ".csv");
     write_cent_header(ts_file, runningConf);
     ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     auto b_centrality = constructMap(v.keys, v.vals);
     for (auto &kv : b_centrality) {
-      ts_file << inv_vertice_map[kv.first] << runningConf.sep << kv.second
+      ts_file << inv_vertice_map.at(kv.first) << runningConf.sep << kv.second
               << "\n";
+    }
+    ts_file.close();
+  }
+}
+
+void output_particle_ts(const Config &runningConf,
+                        const Eigen::Map<Eigen::MatrixXd> &mat,
+                        const std::map<int, std::string> &inv_vertice_map,
+                        const std::vector<long> &ts)
+{
+  auto p = fs::path(runningConf.OutputPath + "/" + ts_particle_path);
+  check_path(p);
+  auto le = mat.cols();
+  auto ts_len = ts.size();
+  for (unsigned int i = 0; i < le; i++){
+    auto col = mat.col(i);
+    std::ofstream ts_file(p.string() + "/" +
+                          convFillString(inv_vertice_map.at(i), 5) + ".csv");
+    ts_file << "ts" << runningConf.sep << "centrality\n";
+    for (unsigned int j = 0; j < ts_len; j++){
+        ts_file << ts[j] << runningConf.sep << col(j) << "\n";
     }
     ts_file.close();
   }

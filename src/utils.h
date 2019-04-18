@@ -2,7 +2,9 @@
 #define UTIL_H
 
 #include "data.h"
+#include <Eigen/Eigen>
 #include <algorithm>
+#include <boost/filesystem.hpp>
 #include <cassert>
 #include <deque>
 #include <functional>
@@ -26,11 +28,19 @@ get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
 Config getCL(int &argc, char **argv);
 void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
-void write_ts_header(std::ofstream &out, Config &conf);
-void write_cent_header(std::ofstream &out, Config &conf);
-void output_ts(std::ofstream &ts_mean_file, Config &runningConf,
-               std::vector<Result> &results,
-               std::map<int, std::string> &inv_vertice_map);
+void write_ts_header(std::ofstream &out, const Config &conf);
+void write_cent_header(std::ofstream &out, const Config &conf);
+void output_centrality_ts(std::ofstream &ts_mean_file,
+                          const Config &runningConf,
+                          const std::vector<Result> &results,
+                          const std::map<int, std::string> &inv_vertice_map);
+void output_particle_ts(const Config &runningConf,
+                        const Eigen::Map<Eigen::MatrixXd> &mat,
+                        const std::map<int, std::string> &inv_vertice_map,
+                        const std::vector<long> &ts);
+
+inline void check_path(const boost::filesystem::path &path);
+
 char *trimwhitespace(char *str);
 
 template <class Container>
@@ -72,7 +82,7 @@ template <typename K, typename V> std::vector<V> getVals(std::map<K, V> &map)
 }
 
 template <typename K, typename V>
-std::map<K, V> constructMap(std::vector<K> &keys, std::vector<V> &vals)
+std::map<K, V> constructMap(const std::vector<K> &keys, const std::vector<V> &vals)
 {
   std::map<K, V> v_map;
   std::transform(keys.begin(), keys.end(), vals.begin(),
