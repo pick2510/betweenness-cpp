@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
-      for (unsigned int dst_rank = 0; dst_rank < world_size; dst_rank++) {
+      for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
         if (reqs_world[dst_rank].test()) {
           reqs_ts[dst_rank].wait();
           BOOST_LOG_TRIVIAL(info)
