@@ -40,6 +40,7 @@ int main(int argc, char **argv)
   char hostname[HOSTNAME_LEN]{};
   boost::mpi::environment env{argc, argv};
   boost::mpi::communicator world;
+  boost::mpi::communicator tscom(world, boost::mpi::comm_duplicate);
   Config runningConf{};
   std::map<int, std::string> inv_vertice_map{};
   std::map<std::string, int> vertice_map{};
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
+      reqs_ts[dst_rank] =  tscom.irecv(dst_rank, TAG_PART_TS,
                                       &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
@@ -161,7 +162,7 @@ int main(int argc, char **argv)
       chain_file_list.pop_front();
       reqs_world[dst_rank] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] = world.irecv(dst_rank, TAG_PART_TS,
+      reqs_ts[dst_rank] = tscom.irecv(dst_rank, TAG_PART_TS,
                                       &ts_particle[v_index++ * p_size], p_size);
     }
 
@@ -208,7 +209,7 @@ int main(int argc, char **argv)
           << "[SLAVE: " << rank << "] (" << hostname << ") Done with job "
           << file << ". Send Result.\n";
       world.send(0, TAG_RESULT, res);
-      world.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
+      tscom.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
 
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
