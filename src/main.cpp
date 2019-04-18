@@ -135,16 +135,16 @@ int main(int argc, char **argv)
       world.send(dst_rank, TAG_FILE, file.data(), file.size());
       chain_file_list.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
-      reqs_world[dst_rank] =
+      reqs_world[dst_rank - 1] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-      reqs_ts[dst_rank] = tscom.irecv(dst_rank, TAG_PART_TS,
+      reqs_ts[dst_rank - 1] = tscom.irecv(dst_rank, TAG_PART_TS,
                                       &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
     while (chain_file_list.size() > 0) {
       for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
-        if (reqs_world[dst_rank].test()) {
-          reqs_ts[dst_rank].wait();
+        if (reqs_world[dst_rank - 1].test()) {
+          reqs_ts[dst_rank - 1].wait();
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] Rank " << dst_rank << " is done.\n";
           // Check if there is remaining jobs
@@ -161,9 +161,9 @@ int main(int argc, char **argv)
               << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
           world.send(dst_rank, TAG_FILE, file.data(), file.size());
           chain_file_list.pop_front();
-          reqs_world[dst_rank] =
+          reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
-          reqs_ts[dst_rank] = tscom.irecv(
+          reqs_ts[dst_rank- 1] = tscom.irecv(
               dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
         }
       }
