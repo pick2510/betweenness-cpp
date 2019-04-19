@@ -265,6 +265,7 @@ void output_particle_ts(const Config &runningConf,
     auto col = mat.col(i);
     std::ofstream ts_file(p.string() + "/" +
                           convFillString(inv_vertice_map.at(i), 5) + ".csv");
+    ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     ts_file << "ts" << runningConf.sep << "centrality\n";
     for (unsigned int j = 0; j < ts_len; j++){
         ts_file << ts[j] << runningConf.sep << col(j) << "\n";
