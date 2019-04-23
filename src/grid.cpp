@@ -62,26 +62,42 @@ int main(int argc, char **argv)
   storage.sync_schema();
   std::atomic<long> index{0};
   double percent{0.0};
+  std::vector<std::vector<ContactColumns>> chunk_res;
   omp_lock_t mutex;
   omp_init_lock(&mutex);
 #pragma omp parallel for ordered
   for (int i = 0; i < chain_size; i++) {
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
-    auto res_vec = Dump.getData();
     omp_set_lock(&mutex);
-    storage.transaction([&] {
-      for (auto &column : res_vec) {
-        storage.insert(column);
-      }
-      return true;
-    });
+    chunk_res.push_back(Dump.getData());
     index++;
+    if (chunk_res.size() > 100) {
+      BOOST_LOG_TRIVIAL(info) << "Starting Transaction";
+      storage.transaction([&] {
+        for (auto &column : chunk_res) {
+          for (auto &res : column) {
+            storage.insert(res);
+          }
+        }
+        return true;
+      });
+      BOOST_LOG_TRIVIAL(info) << "Transaction Finished";
+      chunk_res.clear();
+    }
     omp_unset_lock(&mutex);
-    percent = (index / chain_size) * 100;
+    percent = (index / chain_size) * 100.0;
     BOOST_LOG_TRIVIAL(info)
         << percent << "% (" << index << " of " << chain_size << ") done";
   }
+  storage.transaction([&] {
+    for (auto &column : chunk_res) {
+      for (auto &res : column) {
+        storage.insert(res);
+      }
+    }
+    return true;
+  });
   omp_destroy_lock(&mutex);
   return EXIT_SUCCESS;
 }
