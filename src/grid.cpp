@@ -64,7 +64,7 @@ int main(int argc, char **argv)
   double percent{0.0};
   omp_lock_t mutex;
   omp_init_lock(&mutex);
-#pragma omp parallel for
+#pragma omp parallel for ordered
   for (int i = 0; i < chain_size; i++) {
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
