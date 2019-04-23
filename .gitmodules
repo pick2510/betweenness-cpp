@@ -4,6 +4,3 @@
 [submodule "libeigen"]
 	path = libeigen
 	url = https://github.com/eigenteam/eigen-git-mirror.git
-[submodule "SQLiteCpp"]
-	path = SQLiteCpp
-	url = https://github.com/SRombauts/SQLiteCpp.git
