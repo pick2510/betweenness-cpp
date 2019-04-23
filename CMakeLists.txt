@@ -13,7 +13,6 @@ find_package(MPI REQUIRED)
 #    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 #endif()
 
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/SQLiteCpp)
 
 
 set(Boost_USE_STATIC_LIBS        ON) # only find static libs
@@ -21,10 +20,11 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(Boost_NO_BOOST_CMAKE    ON)
 find_package(Boost COMPONENTS log_setup log serialization mpi filesystem)
-include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include  ${CMAKE_CURRENT_LIST_DIR}/SQLiteCpp)
+include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include)
 
 set (CMAKE_CXX_STANDARD 11)
-
+ADD_LIBRARY(sqlite3 STATIC
+             ./src/sqlite3.c )
 
 
 # Core and main are split. This allows us to link core to main and tests.
@@ -32,13 +32,14 @@ set (CMAKE_CXX_STANDARD 11)
 # Core library. *.cpp should be added here.
 
 # Main entry point.
-add_executable(betweenness-cpp
-  ./src/main.cpp ./src/utils.cpp ./src/graph.cpp)
+add_executable(betweenness
+  ./src/betweenness.cpp ./src/utils.cpp ./src/graph.cpp)
 
 
 
 
-target_link_libraries(betweenness-cpp ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
+
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
