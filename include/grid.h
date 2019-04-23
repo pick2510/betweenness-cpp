@@ -9,7 +9,8 @@ inline auto initStorage(const std::string &path)
   return make_storage(
       path,
       make_table(
-          "ParticleContact", make_column("p1_x", &ContactColumns::p1_x),
+          "ParticleContact", make_index("idx_ts_cellstr", &ContactColumns::ts, &ContactColumns::cellstr), 
+          make_column("p1_x", &ContactColumns::p1_x),
           make_column("p1_y", &ContactColumns::p1_y),
           make_column("p1_z", &ContactColumns::p1_z),
           make_column("p2_x", &ContactColumns::p2_x),
