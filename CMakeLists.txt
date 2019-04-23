@@ -22,7 +22,7 @@ set(Boost_NO_BOOST_CMAKE    ON)
 find_package(Boost COMPONENTS log_setup log serialization mpi filesystem)
 include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include)
 
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 ADD_LIBRARY(sqlite3 STATIC
              ./src/sqlite3.c )
 
@@ -36,9 +36,13 @@ add_executable(betweenness
   ./src/betweenness.cpp ./src/utils.cpp ./src/graph.cpp)
 
 
+add_executable(grid
+  ./src/grid.cpp ./src/utils.cpp ./src/graph.cpp)
+
 
 
 target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
+target_link_libraries(grid ${Boost_LIBRARIES} sqlite3)
 
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")

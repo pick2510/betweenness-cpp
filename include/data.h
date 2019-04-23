@@ -9,6 +9,14 @@
 #include <string>
 #include <vector>
 
+
+constexpr int MASTER = 0;
+constexpr int TAG_RESULT = 1;
+constexpr int TAG_BREAK = 2;
+constexpr int TAG_FILE = 10;
+constexpr int HOSTNAME_LEN = 255;
+constexpr int TAG_PART_TS = 20;
+
 typedef struct {
 private:
   friend class boost::serialization::access;
