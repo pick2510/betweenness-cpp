@@ -15,7 +15,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 
-#include "main.h"
 
 namespace fs = boost::filesystem;
 
