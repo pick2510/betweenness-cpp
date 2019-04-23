@@ -60,6 +60,13 @@ int main(int argc, char **argv)
   for (int i = 0; i < chain_size; i++){
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
+    auto res_vec = Dump.getData();
+    storage.transaction([&] {
+    for (auto &column : res_vec) {
+      storage.insert(column);
+    }
+    return true;
+  });
   }
 
   return EXIT_SUCCESS;

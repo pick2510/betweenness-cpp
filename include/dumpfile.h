@@ -19,6 +19,7 @@ private:
 public:
   dumpfile(const std::string &Path);
   void parse_file();
+  std::vector<ContactColumns> getData(){return ts_file_column;}
   ~dumpfile() { file.close(); };
 };
 
