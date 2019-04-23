@@ -57,8 +57,8 @@ int main(int argc, char **argv)
   auto chain_size = chain_file_list.size();
   using Storage = decltype(initStorage(""));
   Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
-  storage.pragma.journal_mode(journal_mode::WAL);
-  storage.pragma.synchronous(1);
+//  storage.pragma.journal_mode(journal_mode::WAL);
+//  storage.pragma.synchronous(1);
   storage.sync_schema();
   std::atomic<long> index{0};
   double percent{0.0};
