@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include "data.h"
-#include "sqlite_orm.h"
 
 class dumpfile {
   static constexpr int begin_line = 9;

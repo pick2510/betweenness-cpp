@@ -100,7 +100,8 @@ int main(int argc, char **argv)
   });
   omp_destroy_lock(&mutex);
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
-  auto idx = make_storage(runningConf.OutputPath + "/" + "DEM.db", make_index("idx_ts_cellstr", &ContactColumns::ts, &ContactColumns::cellstr));
+  using Idx = decltype(indexStorage(""));
+  Idx idx = indexStorage(runningConf.OutputPath + "/" + "DEM.db");
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;
