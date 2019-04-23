@@ -6,17 +6,17 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <omp.h>
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <omp.h>
 
+#include "dumpfile.h"
 #include "grid.h"
 #include "natural_sort.hpp"
 #include "sqlite_orm.h"
 #include "utils.h"
-#include "dumpfile.h"
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -60,21 +60,26 @@ int main(int argc, char **argv)
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(1);
   storage.sync_schema();
+  std::atomic<long> index{0};
+  double percent{0.0};
   omp_lock_t mutex;
   omp_init_lock(&mutex);
 #pragma omp parallel for
-  for (int i = 0; i < chain_size; i++){
+  for (int i = 0; i < chain_size; i++) {
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
     auto res_vec = Dump.getData();
     omp_set_lock(&mutex);
     storage.transaction([&] {
-    for (auto &column : res_vec) {
-      storage.insert(column);
-    }
-    return true;
-  });
+      for (auto &column : res_vec) {
+        storage.insert(column);
+      }
+      return true;
+    });
     omp_unset_lock(&mutex);
+    percent = (index / chain_size) * 100;
+    BOOST_LOG_TRIVIAL(info)
+        << percent << "% (" << index << " of " << chain_size << ") done";
   }
   omp_destroy_lock(&mutex);
   return EXIT_SUCCESS;
