@@ -32,13 +32,12 @@ set (CMAKE_CXX_STANDARD 11)
 # Core library. *.cpp should be added here.
 
 # Main entry point.
-add_executable(betweenness
-  ./src/betweenness.cpp ./src/utils.cpp ./src/graph.cpp)
+add_executable(betweenness-cpp
+  ./src/main.cpp ./src/utils.cpp ./src/graph.cpp)
 
-# Link core to main.
-target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS}  SQLiteCpp sqlite3 pthread dl)
-# Add flags
-
+# Link core to main
+target_link_libraries(betweenness-cpp ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+# Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
 set(CMAKE_C_FLAGS_DEBUG "-Og -g")
