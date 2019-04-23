@@ -42,7 +42,7 @@ add_executable(grid
 
 
 target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
-target_link_libraries(grid ${Boost_LIBRARIES} sqlite3)
+target_link_libraries(grid ${Boost_LIBRARIES} sqlite3 dl pthread)
 
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")

@@ -164,7 +164,7 @@ Config getCL(int &argc, char **argv)
     }
   }
   if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty()) {
-    throw std::invalid_argument("Please use Input and Output Path");
+    throw std::invalid_argument("Please use Input (-i) and Output Path (-o)");
   }
   return runningConfig;
 }
