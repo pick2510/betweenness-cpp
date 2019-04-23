@@ -15,6 +15,7 @@
 #include "natural_sort.hpp"
 #include "sqlite_orm.h"
 #include "utils.h"
+#include "dumpfile.h"
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -52,9 +53,14 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
   SI::natural::sort(chain_file_list);
-
+  auto chain_size = chain_file_list.size();
   using Storage = decltype(initStorage(""));
-  Storage storage = initStorage("");
+  Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
   storage.sync_schema();
+  for (int i = 0; i < chain_size; i++){
+    dumpfile Dump(chain_file_list[i]);
+    Dump.parse_file();
+  }
+
   return EXIT_SUCCESS;
 }
