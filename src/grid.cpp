@@ -72,6 +72,7 @@ int main(int argc, char **argv)
     Dump.parse_file();
     auto res = Dump.getData();
     index++;
+    auto guard = stor.transaction_guard();
     stor.transaction([&] {
       for (auto &entry : res) {
         stor.insert(entry);
