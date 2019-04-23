@@ -11,7 +11,7 @@
 
 #include "data.h"
 #include "graph.h"
-#include "main.h"
+#include "betweenness.h"
 #include "natural_sort.hpp"
 #include "utils.h"
 #include <Eigen/Eigen>
