@@ -60,18 +60,22 @@ int main(int argc, char **argv)
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(1);
   storage.sync_schema();
+  omp_lock_t mutex;
+  omp_init_lock(&mutex);
 #pragma omp parallel for
   for (int i = 0; i < chain_size; i++){
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
     auto res_vec = Dump.getData();
+    omp_set_lock(&mutex);
     storage.transaction([&] {
     for (auto &column : res_vec) {
       storage.insert(column);
     }
     return true;
   });
+    omp_unset_lock(&mutex);
   }
-
+  omp_destroy_lock(&mutex);
   return EXIT_SUCCESS;
 }
