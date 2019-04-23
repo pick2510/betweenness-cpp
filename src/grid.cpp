@@ -76,6 +76,7 @@ int main(int argc, char **argv)
       }
       return true;
     });
+    index++;
     omp_unset_lock(&mutex);
     percent = (index / chain_size) * 100;
     BOOST_LOG_TRIVIAL(info)
