@@ -57,7 +57,7 @@ int main(int argc, char **argv)
   auto chain_size = chain_file_list.size();
   using Storage = decltype(initStorage(""));
   Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
-//  storage.pragma.journal_mode(journal_mode::WAL);
+  //  storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
   std::atomic<long> index{0};
@@ -67,37 +67,21 @@ int main(int argc, char **argv)
   omp_init_lock(&mutex);
 #pragma omp parallel for ordered
   for (int i = 0; i < chain_size; i++) {
+    Storage stor = initStorage(runningConf.OutputPath + "/" + "DEM.db");
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
-    omp_set_lock(&mutex);
-    chunk_res.push_back(Dump.getData());
+    auto res = Dump.getData();
     index++;
-    if (chunk_res.size() > 100) {
-      BOOST_LOG_TRIVIAL(info) << "Starting Transaction";
-      storage.transaction([&] {
-        for (auto &column : chunk_res) {
-          for (auto &res : column) {
-            storage.insert(res);
-          }
-        }
-        return true;
-      });
-      BOOST_LOG_TRIVIAL(info) << "Transaction Finished";
-      chunk_res.clear();
-    }
-    omp_unset_lock(&mutex);
+    stor.transaction([&] {
+      for (auto &entry : res) {
+        stor.insert(entry);
+      }
+      return true;
+    });
     percent = (index / chain_size) * 100.0;
     BOOST_LOG_TRIVIAL(info)
         << percent << "% (" << index << " of " << chain_size << ") done";
   }
-  storage.transaction([&] {
-    for (auto &column : chunk_res) {
-      for (auto &res : column) {
-        storage.insert(res);
-      }
-    }
-    return true;
-  });
-  omp_destroy_lock(&mutex);
+
   return EXIT_SUCCESS;
 }
