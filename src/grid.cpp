@@ -58,7 +58,7 @@ int main(int argc, char **argv)
   using Storage = decltype(initStorage(""));
   Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
 //  storage.pragma.journal_mode(journal_mode::WAL);
-//  storage.pragma.synchronous(1);
+  storage.pragma.synchronous(0);
   storage.sync_schema();
   std::atomic<long> index{0};
   double percent{0.0};
