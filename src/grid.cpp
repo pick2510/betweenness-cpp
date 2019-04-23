@@ -10,6 +10,7 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <omp.h>
 
 #include "grid.h"
 #include "natural_sort.hpp"
@@ -59,6 +60,7 @@ int main(int argc, char **argv)
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(1);
   storage.sync_schema();
+#pragma omp parallel for
   for (int i = 0; i < chain_size; i++){
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
