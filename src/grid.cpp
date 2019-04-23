@@ -57,7 +57,7 @@ int main(int argc, char **argv)
   auto chain_size = chain_file_list.size();
   using Storage = decltype(initStorage(""));
   Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
-//  storage.pragma.journal_mode(journal_mode::WAL);
+  storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
   std::atomic<long> index{0};
@@ -99,5 +99,9 @@ int main(int argc, char **argv)
     return true;
   });
   omp_destroy_lock(&mutex);
+  BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
+  auto storage = make_storage(runningConf.OutputPath + "/" + "DEM.db", make_index("idx_ts_cellstr", &ContactColumns::ts, &ContactColumns::cellstr));
+  storage.sync_schema();
+  BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;
 }
