@@ -6,7 +6,9 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#if defined(_OPENMP)
 #include <omp.h>
+#endif
 #include <stdexcept>
 #include <string>
 #include <unistd.h>
@@ -63,13 +65,17 @@ int main(int argc, char **argv)
   std::atomic<long> index{0};
   double percent{0.0};
   std::vector<std::vector<ContactColumns>> chunk_res;
+#if defined(_OPENMP)
   omp_lock_t mutex;
   omp_init_lock(&mutex);
 #pragma omp parallel for ordered
+#endif
   for (int i = 0; i < chain_size; i++) {
     dumpfile Dump(chain_file_list[i]);
     Dump.parse_file();
+#if defined(_OPENMP)
     omp_set_lock(&mutex);
+#endif
     chunk_res.push_back(Dump.getData());
     index++;
     if (chunk_res.size() > 100) {
@@ -85,7 +91,9 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(info) << "Transaction Finished";
       chunk_res.clear();
     }
+#if defined(_OPENMP)
     omp_unset_lock(&mutex);
+#endif
     percent = (index / chain_size) * 100.0;
     BOOST_LOG_TRIVIAL(info)
         << percent << "% (" << index << " of " << chain_size << ") done";
@@ -98,7 +106,9 @@ int main(int argc, char **argv)
     }
     return true;
   });
+#if defined(_OPENMP)
   omp_destroy_lock(&mutex);
+#endif
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
   using Idx = decltype(indexStorage(""));
   Idx idx = indexStorage(runningConf.OutputPath + "/" + "DEM.db");

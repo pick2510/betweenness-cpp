@@ -6,7 +6,7 @@ project(DEM-Utils CXX C)
 
 find_package(MPI REQUIRED)
 
-find_package(OpenMP)
+find_package(OPENMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -19,7 +19,7 @@ set(Boost_USE_STATIC_LIBS        ON) # only find static libs
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(Boost_NO_BOOST_CMAKE    ON)
-find_package(Boost COMPONENTS log_setup log serialization mpi filesystem)
+find_package(Boost REQUIRED COMPONENTS log_setup log serialization mpi filesystem)
 include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include)
 
 set (CMAKE_CXX_STANDARD 14)
