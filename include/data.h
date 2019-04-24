@@ -16,9 +16,11 @@ constexpr int TAG_FILE = 10;
 constexpr int HOSTNAME_LEN = 255;
 constexpr int TAG_PART_TS = 20;
 
+struct cell {
+  int x, y, z;
+};
 
-
-struct Config{
+struct Config {
 private:
   friend class boost::serialization::access;
   template <class Archive>
@@ -39,15 +41,15 @@ public:
   std::string InputPath;
   std::string OutputPath;
   char sep[2] = " ";
-  long x_cells = 0;
-  long y_cells = 0;
-  long z_cells = 0;
+  int x_cells = 0;
+  int y_cells = 0;
+  int z_cells = 0;
   double domainsize_x = 0.0;
   double domainsize_y = 0.0;
   double domainsize_z = 0.0;
 };
 
-struct Result{
+struct Result {
 private:
   friend class boost::serialization::access;
   template <class Archive>
@@ -76,7 +78,6 @@ public:
   double kur;
   double q_090;
   double q_099;
-
 };
 
 constexpr char ts_particle_path[] = "particles";
@@ -216,8 +217,5 @@ enum ParticleTXTColumns {
 
 constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));
 constexpr double Gstar = (6.5e11) / (4 * (2 - .25) * (1 + .25));
-
-
-
 
 #endif

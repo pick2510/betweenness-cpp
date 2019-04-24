@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <set>
 #include "INIReader.h"
 
 
@@ -42,6 +43,7 @@ void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
                         const std::vector<long> &ts);
+std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y, std::vector<int> &z);
 
 inline void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);

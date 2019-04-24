@@ -1,12 +1,23 @@
+#ifndef DECOMP_H
+#define DECOMP_H
+
 #include "data.h"
+#include <string>
+#include <vector>
+#include <set>
 
-
-class decomposition
-{
+class Decomposition {
 private:
-    /* data */
+  const Config runningConf;
+  double dx, dy, dz;
+  std::vector<cell> cells;
+  std::vector<int> x_range,y_range, z_range;
+
 public:
-    decomposition(int x_cells, int y_cells, int z_cells);
-    ~decomposition();
+  Decomposition(const Config &runningConf);
+  std::string calc_cell(double x, double y, double z);
+  cell calc_cell_numeric(double x, double y, double z);
+  ~Decomposition();
 };
 
+#endif

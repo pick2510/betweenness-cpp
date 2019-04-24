@@ -14,12 +14,13 @@
 #include <unistd.h>
 #include <vector>
 
+#include "INIreader.h"
 #include "dumpfile.h"
 #include "grid.h"
 #include "natural_sort.hpp"
 #include "sqlite_orm.h"
 #include "utils.h"
-#include "INIreader.h"
+#include "decomposition.h"
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -29,7 +30,7 @@ using namespace sqlite_orm;
 int main(int argc, char **argv)
 {
   char hostname[HOSTNAME_LEN]{};
-  std::string configPath {};
+  std::string configPath{};
   INIReader reader;
   gethostname(hostname, HOSTNAME_LEN);
   // MASTER CODE
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
   Config runningConf = getGridConfigObj(reader);
+  Decomposition decomp(runningConf);
   std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
   std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
   xyzpattern = trim(xyzpattern);

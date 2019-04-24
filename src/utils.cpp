@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string.h>
 #include <unistd.h>
+#include <set>
 
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -309,12 +310,29 @@ Config getGridConfigObj(INIReader &reader){
   return Config{
     .InputPath=reader.Get("grid", "inputPath",""),
     .OutputPath=reader.Get("grid", "outputPath",""),
-    .x_cells = reader.GetInteger("grid", "x_cells", 0),
-    .y_cells = reader.GetInteger("grid", "y_cells", 0),
-    .z_cells = reader.GetInteger("grid", "z_cells", 0),
+    .x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0)),
+    .y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0)),
+    .z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0)),
     .domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0),
     .domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0),
     .domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0), 
   };
 
+}
+
+
+std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y, std::vector<int> &z){
+  std::vector<cell> cellset;
+  for (auto& elem_x: x){
+    for (auto& elem_y: y){
+      for (auto& elem_z: z){
+        cellset.push_back(cell{
+          .x = elem_x,
+          .y = elem_y,
+          .z = elem_z
+        });
+      }
+    }
+  }
+  return cellset;
 }

@@ -37,8 +37,7 @@ add_executable(betweenness
 
 
 add_executable(grid
-  ./src/grid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp)
-
+  ./src/grid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
 
 
 target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
