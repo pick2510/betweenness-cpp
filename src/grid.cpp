@@ -19,6 +19,7 @@
 #include "natural_sort.hpp"
 #include "sqlite_orm.h"
 #include "utils.h"
+#include "INIreader.h"
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -28,7 +29,8 @@ using namespace sqlite_orm;
 int main(int argc, char **argv)
 {
   char hostname[HOSTNAME_LEN]{};
-  Config runningConf{};
+  std::string configPath {};
+  INIReader reader;
   gethostname(hostname, HOSTNAME_LEN);
   // MASTER CODE
   BOOST_LOG_TRIVIAL(info) << "****************************************";
@@ -38,12 +40,20 @@ int main(int argc, char **argv)
   BOOST_LOG_TRIVIAL(info) << "****************************************";
   BOOST_LOG_TRIVIAL(info) << "Hostname MASTER: " << hostname;
   try {
-    runningConf = getCL(argc, argv);
+    configPath = getConfigPath(argc, argv);
   }
   catch (std::invalid_argument e) {
     BOOST_LOG_TRIVIAL(error) << e.what();
     exit(EXIT_FAILURE);
   }
+  try {
+    reader = parseConfigFile(configPath);
+  }
+  catch (std::invalid_argument e) {
+    BOOST_LOG_TRIVIAL(error) << e.what();
+    exit(EXIT_FAILURE);
+  }
+  Config runningConf = getGridConfigObj(reader);
   std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
   std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
   xyzpattern = trim(xyzpattern);
@@ -58,7 +68,7 @@ int main(int argc, char **argv)
   SI::natural::sort(chain_file_list);
   auto chain_size = chain_file_list.size();
   using Storage = decltype(initStorage(""));
-  Storage storage = initStorage(runningConf.OutputPath + "/" + "DEM.db");
+  Storage storage = initStorage("DEM.db");
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
@@ -111,7 +121,7 @@ int main(int argc, char **argv)
 #endif
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
   using Idx = decltype(indexStorage(""));
-  Idx idx = indexStorage(runningConf.OutputPath + "/" + "DEM.db");
+  Idx idx = indexStorage("DEM.db");
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;

@@ -14,6 +14,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
+#include "INIreader.h"
 
 
 namespace fs = boost::filesystem;
@@ -144,6 +145,36 @@ get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile)
   return lookup_table;
 }
 
+std::string getConfigPath(int &argc, char **argv){
+  std::string ConfigPath {};  
+  int opt;
+  while ((opt = getopt(argc, argv, "c:")) != -1){
+    switch (opt) {
+      case 'c':
+        ConfigPath = optarg;
+        break;
+    }
+  }
+  if (ConfigPath.empty()){
+     throw std::invalid_argument("Please -c Path to configfile"); 
+  }
+  return ConfigPath;
+}
+
+INIReader parseConfigFile(const std::string &path){
+  fs::path p(path);
+  if (!fs::exists(p)){
+    throw std::invalid_argument("Configfile doesn't exist"); 
+  }
+  INIReader reader(p.string());
+  if (reader.ParseError() != 0) {
+       throw std::invalid_argument("Configfile " + p.string() + " couldn't be loaded");
+  }
+  return reader;  
+
+}
+
+
 Config getCL(int &argc, char **argv)
 {
   Config runningConfig;
@@ -271,4 +302,19 @@ void output_particle_ts(const Config &runningConf,
     }
     ts_file.close();
   }
+}
+
+
+Config getGridConfigObj(INIReader &reader){
+  return Config{
+    .InputPath=reader.Get("grid", "inputPath",""),
+    .OutputPath=reader.Get("grid", "outputPath",""),
+    .x_cells = reader.GetInteger("grid", "x_cells", 0),
+    .y_cells = reader.GetInteger("grid", "y_cells", 0),
+    .z_cells = reader.GetInteger("grid", "z_cells", 0),
+    .domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0),
+    .domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0),
+    .domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0), 
+  };
+
 }

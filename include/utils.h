@@ -14,6 +14,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "INIReader.h"
+
 
 std::vector<std::string> glob(const std::string &pattern);
 std::deque<std::string> glob_deq(const std::string &pattern);
@@ -26,6 +28,8 @@ get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile);
 std::vector<double>
 get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
 Config getCL(int &argc, char **argv);
+std::string getConfigPath(int &argc, char **argv);
+INIReader parseConfigFile(const std::string &path);
 void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
 void write_ts_header(std::ofstream &out, const Config &conf);
@@ -40,6 +44,7 @@ void output_particle_ts(const Config &runningConf,
                         const std::vector<long> &ts);
 
 inline void check_path(const boost::filesystem::path &path);
+Config getGridConfigObj(INIReader &reader);
 
 char *trimwhitespace(char *str);
 

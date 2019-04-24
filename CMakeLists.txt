@@ -20,7 +20,7 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(Boost_NO_BOOST_CMAKE    ON)
 find_package(Boost REQUIRED COMPONENTS log_setup log serialization mpi filesystem)
-include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include)
+include_directories(${Boost_INCLUDE_DIRS} ${MPI_CXX_INCLUDE_PATH} ${PROJECT_SOURCE_DIR}/libeigen ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/inih )
 
 set (CMAKE_CXX_STANDARD 14)
 ADD_LIBRARY(sqlite3 STATIC

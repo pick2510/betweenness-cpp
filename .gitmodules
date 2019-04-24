@@ -4,3 +4,6 @@
 [submodule "libeigen"]
 	path = libeigen
 	url = https://github.com/eigenteam/eigen-git-mirror.git
+[submodule "inih"]
+	path = inih
+	url = https://github.com/jtilly/inih.git

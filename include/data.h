@@ -16,7 +16,9 @@ constexpr int TAG_FILE = 10;
 constexpr int HOSTNAME_LEN = 255;
 constexpr int TAG_PART_TS = 20;
 
-typedef struct {
+
+
+struct Config{
 private:
   friend class boost::serialization::access;
   template <class Archive>
@@ -25,15 +27,27 @@ private:
     ar &InputPath;
     ar &OutputPath;
     ar &sep;
+    ar &x_cells;
+    ar &y_cells;
+    ar &z_cells;
+    ar &domainsize_x;
+    ar &domainsize_y;
+    ar &domainsize_z;
   }
 
 public:
   std::string InputPath;
   std::string OutputPath;
   char sep[2] = " ";
-} Config;
+  long x_cells = 0;
+  long y_cells = 0;
+  long z_cells = 0;
+  double domainsize_x = 0.0;
+  double domainsize_y = 0.0;
+  double domainsize_z = 0.0;
+};
 
-typedef struct {
+struct Result{
 private:
   friend class boost::serialization::access;
   template <class Archive>
@@ -63,7 +77,7 @@ public:
   double q_090;
   double q_099;
 
-} Result;
+};
 
 constexpr char ts_particle_path[] = "particles";
 constexpr char ts_centrality_path[] = "centrality";
@@ -204,7 +218,6 @@ constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));
 constexpr double Gstar = (6.5e11) / (4 * (2 - .25) * (1 + .25));
 
 
-inline auto initStorage(const std::string &path);
 
 
 #endif
