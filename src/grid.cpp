@@ -58,6 +58,8 @@ int main(int argc, char **argv)
   Decomposition decomp(runningConf);
   std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
   std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
+  BOOST_LOG_TRIVIAL(info) << "Using Input: " << runningConf.InputPath;
+  BOOST_LOG_TRIVIAL(info) << "Using Output: " << runningConf.OutputPath; 
   xyzpattern = trim(xyzpattern);
   chainpattern = trim(chainpattern);
   auto chain_file_list = glob_deq(chainpattern);
