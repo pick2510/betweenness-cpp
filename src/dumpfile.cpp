@@ -1,11 +1,12 @@
 #include "dumpfile.h"
 #include "data.h"
+#include "decomposition.h"
 #include "sqlite_orm.h"
 #include "utils.h"
 #include <boost/log/trivial.hpp>
 
-dumpfile::dumpfile(const std::string &Path)
-    : file(Path, std::ios::in)
+dumpfile::dumpfile(const std::string &Path, const std::vector<double> &radius, const Decomposition &decomp)
+    : file(Path, std::ios::in), radius(radius), decomp(decomp)
 {
   set_fpointer(dumpfile::ts_line);
   file >> timestep;
@@ -14,7 +15,7 @@ dumpfile::dumpfile(const std::string &Path)
   BOOST_LOG_TRIVIAL(info) << "Initialized";
 }
 
-void dumpfile::set_fpointer(int n) { goto_line(file, n); }
+
 
 void dumpfile::parse_file()
 {
@@ -70,7 +71,32 @@ void dumpfile::parse_file()
     columns.sliding_contact =
         std::stod(splitted_line[ContactTXTColumns::sliding_contact]);
     columns.ts = timestep;
+    auto coord = calc_contactpoint(columns);
+    auto cell = decomp.calc_cell_numeric(coord);
+    columns.cellstr = decomp.calc_cell(coord);
+    columns.cell_x = cell.x;
+    columns.cell_y = cell.y;
+    columns.cell_z = cell.z;
     ts_file_column.push_back(columns);
   }
-  
+}
+
+coordinate dumpfile::calc_contactpoint(ContactColumns &contact){
+    double Ab_x, Ab_y, Ab_z, cm_x, cm_y, cm_z;
+    double p1_r {radius[contact.p1_id]};
+    double p2_r {radius[contact.p2_id]};
+    if (p1_r < 0) p1_r = p2_r;
+    if (p2_r < 0) p2_r = p1_r;
+    double da = p1_r / (p1_r + p2_r);
+    Ab_x = contact.p2_x - contact.p1_x;
+    Ab_y = contact.p2_y - contact.p1_y;
+    Ab_z = contact.p2_z - contact.p1_z;
+    cm_x = p1_x + Ab_x * da;
+    cm_y = p1_y + Ab_y * da;
+    cm_z = p1_z + Ab_z * da;
+    return coordinate{
+        .x = cm_x,
+        .y = cm_y,
+        .z = cm_z
+    };
 }

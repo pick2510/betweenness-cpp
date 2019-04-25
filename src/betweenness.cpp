@@ -81,7 +81,7 @@ int main(int argc, char **argv)
       world.abort(-255);
       exit(EXIT_FAILURE);
     }
-    auto radius_file = read_file(radius_file_list[0]);
+    auto radius_file = read_radius_file(radius_file_list[0]);
 
     radius_file.pop_back();
     std::sort(radius_file.begin(), radius_file.end(), cmp_radii);

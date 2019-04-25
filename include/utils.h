@@ -20,7 +20,7 @@
 
 std::vector<std::string> glob(const std::string &pattern);
 std::deque<std::string> glob_deq(const std::string &pattern);
-std::vector<std::vector<std::string>> read_file(const std::string &file);
+std::vector<std::vector<std::string>> read_radius_file(const std::string &file);
 bool cmp_radii(const std::vector<std::string> &a,
                const std::vector<std::string> &b);
 std::string trim(const std::string &s);

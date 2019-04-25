@@ -20,6 +20,10 @@ struct cell {
   int x, y, z;
 };
 
+struct coordinate {
+  double x, y, z;
+};
+
 struct Config {
 private:
   friend class boost::serialization::access;

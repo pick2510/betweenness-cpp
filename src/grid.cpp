@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "INIreader.h"
+#include "INIReader.h"
 #include "dumpfile.h"
 #include "grid.h"
 #include "natural_sort.hpp"
@@ -67,8 +67,13 @@ int main(int argc, char **argv)
         << "Need at least one file in postchain and postxyz Dir.";
     exit(EXIT_FAILURE);
   }
+  auto radius_file = read_radius_file(radius_file_list[0]);
+  radius_file.pop_back();
+  std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
+  auto lookup_table = get_lookup_table(radius_file);
   SI::natural::sort(chain_file_list);
   auto chain_size = chain_file_list.size();
+
   using Storage = decltype(initStorage(""));
   Storage storage = initStorage("DEM.db");
   storage.pragma.journal_mode(journal_mode::WAL);
@@ -83,7 +88,7 @@ int main(int argc, char **argv)
 #pragma omp parallel for ordered
 #endif
   for (int i = 0; i < chain_size; i++) {
-    dumpfile Dump(chain_file_list[i]);
+    dumpfile Dump(chain_file_list[i], lookup_table, decomp);
     Dump.parse_file();
 #if defined(_OPENMP)
     omp_set_lock(&mutex);

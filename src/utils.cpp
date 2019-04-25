@@ -15,7 +15,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
-#include "INIreader.h"
+#include "INIReader.h"
 
 
 namespace fs = boost::filesystem;
@@ -93,7 +93,7 @@ bool cmp_radii(const std::vector<std::string> &a,
   return i_a < i_b;
 }
 
-std::vector<std::vector<std::string>> read_file(const std::string &file)
+std::vector<std::vector<std::string>> read_radius_file(const std::string &file)
 {
   const int skip_lines = 9;
   std::vector<std::vector<std::string>> file_content;
@@ -139,7 +139,7 @@ std::vector<double>
 get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile)
 {
   int lt_size = std::stoi(radiusfile.back()[0]) + 1;
-  std::vector<double> lookup_table(lt_size, 0);
+  std::vector<double> lookup_table(lt_size, -1);
   for (auto &elem : radiusfile) {
     lookup_table[std::stoi(elem[0])] = std::stod(elem[5]);
   }
@@ -310,6 +310,7 @@ Config getGridConfigObj(INIReader &reader){
   return Config{
     .InputPath=reader.Get("grid", "inputPath",""),
     .OutputPath=reader.Get("grid", "outputPath",""),
+    .sep = " ",
     .x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0)),
     .y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0)),
     .z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0)),

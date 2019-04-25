@@ -22,22 +22,20 @@ Decomposition::Decomposition(const Config &runningConf)
   cells = getCartesianProduct(x_range, y_range, z_range);
 }
 
-std::string Decomposition::calc_cell(double x, double y, double z)
+std::string Decomposition::calc_cell(coordinate &coord) const
 {
   std::stringstream ss;
-  ss << "cell" << std::setfill('0') << std::setw(2) << std::floor(x / dx) << "_"
-     << std::setfill('0') << std::setw(2) << std::floor(y / dy) << "_"
-     << std::setfill('0') << std::setw(2) << std::floor(z / dz);
+  ss << "cell_" << std::setfill('0') << std::setw(2) << std::floor(coord.x / dx) << "_"
+     << std::setfill('0') << std::setw(2) << std::floor(coord.y / dy) << "_"
+     << std::setfill('0') << std::setw(2) << std::floor(coord.z / dz);
   return ss.str();
 }
 
-cell Decomposition::calc_cell_numeric(double x, double y, double z){
-    return cell{
-        .x = static_cast<int>(std::floor(x / dx)),
-        .y = static_cast<int>(std::floor(y / dy)),
-        .z = static_cast<int>(std::floor(z / dz))
-    };
+cell Decomposition::calc_cell_numeric(coordinate &coord) const
+{
+  return cell{.x = static_cast<int>(std::floor(coord.x / dx)),
+              .y = static_cast<int>(std::floor(coord.y / dy)),
+              .z = static_cast<int>(std::floor(coord.z / dz))};
 }
-
 
 Decomposition::~Decomposition() {}
