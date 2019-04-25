@@ -309,7 +309,7 @@ void output_particle_ts(const Config &runningConf,
 Config getGridConfigObj(INIReader &reader){
   Config conf;
   conf.InputPath=reader.Get("grid", "inputPath","");
-  conf.InputPath=reader.Get("grid", "inputPath","");
+  conf.OutputPath=reader.Get("grid", "outputPath","");
   conf.x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0));
   conf.y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0));
   conf.z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0));
