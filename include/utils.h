@@ -41,6 +41,10 @@ void output_centrality_ts(std::ofstream &ts_mean_file,
                           const Config &runningConf,
                           const std::vector<Result> &results,
                           const std::map<int, std::string> &inv_vertice_map);
+void output_particle_complete_ts(const Config &runningConf,
+                        const Eigen::Map<Eigen::MatrixXd> &mat,
+                        const std::map<int, std::string> &inv_vertice_map,
+                        const std::vector<long> &ts);
 void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,

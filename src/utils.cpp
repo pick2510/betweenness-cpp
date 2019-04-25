@@ -258,6 +258,30 @@ void output_centrality_ts(std::ofstream &ts_mean_file,
   }
 }
 
+
+void output_particle_complete_ts(const Config &runningConf,
+                        const Eigen::Map<Eigen::MatrixXd> &mat,
+                        const std::map<int, std::string> &inv_vertice_map,
+                        const std::vector<long> &ts)
+{
+  auto p = fs::path(runningConf.OutputPath + "/" + ts_particle_path);
+  check_path(p);
+  auto le = mat.cols();
+  auto ts_len = ts.size();
+  for (unsigned int i = 0; i < le; i++){
+    auto col = mat.col(i);
+    std::ofstream ts_file(p.string() + "/" +
+                          convFillString(inv_vertice_map.at(i), 5) + ".csv");
+    ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+    ts_file << "ts" << runningConf.sep << "centrality\n";
+    for (unsigned int j = 0; j < ts_len; j++){
+        ts_file << ts[j] << runningConf.sep << col(j) << "\n";
+    }
+    ts_file.close();
+  }
+}
+
+
 void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
