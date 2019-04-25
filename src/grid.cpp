@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   auto chain_size = chain_file_list.size();
 
   using Storage = decltype(initStorage(""));
-  Storage storage = initStorage("DEM.db");
+  Storage storage = initStorage(runningConf.OutputPath + "/DEM.db");
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
 #endif
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
   using Idx = decltype(indexStorage(""));
-  Idx idx = indexStorage("DEM.db");
+  Idx idx = indexStorage(runningConf.OutputPath + "/DEM.db");
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;
