@@ -130,6 +130,8 @@ int main(int argc, char **argv)
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
   using Idx = decltype(indexStorage(""));
   Idx idx = indexStorage(runningConf.OutputPath + "/DEM.db");
+  idx.pragma.journal_mode(journal_mode::WAL);
+  idx.pragma.synchronous(0);
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;
