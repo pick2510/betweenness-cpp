@@ -307,18 +307,16 @@ void output_particle_ts(const Config &runningConf,
 
 
 Config getGridConfigObj(INIReader &reader){
-  return Config{
-    .InputPath=reader.Get("grid", "inputPath",""),
-    .OutputPath=reader.Get("grid", "outputPath",""),
-    .sep = " ",
-    .x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0)),
-    .y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0)),
-    .z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0)),
-    .domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0),
-    .domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0),
-    .domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0), 
-  };
-
+  Config conf;
+  conf.InputPath=reader.Get("grid", "inputPath","");
+  conf.InputPath=reader.Get("grid", "inputPath","");
+  conf.x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0));
+  conf.y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0));
+  conf.z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0));
+  conf.domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0);
+  conf.domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0);
+  conf.domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0);
+  return conf;
 }
 
 
