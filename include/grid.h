@@ -59,7 +59,7 @@ inline auto indexStorage(const std::string &path)
   using namespace sqlite_orm;
   return make_storage(
       path,
-      make_index("idx_ts_cellstr", &ContactColumns::ts, &ContactColumns::cellstr),
+      make_index("idx_ts_cellstr", &ContactColumns::ts),
       make_table(
           "ParticleContact",  
           make_column("p1_x", &ContactColumns::p1_x),
