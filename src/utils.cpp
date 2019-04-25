@@ -7,16 +7,15 @@
 #include <glob.h>
 #include <iostream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string.h>
 #include <unistd.h>
-#include <set>
 
+#include "INIReader.h"
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
-#include "INIReader.h"
-
 
 namespace fs = boost::filesystem;
 
@@ -146,59 +145,35 @@ get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile)
   return lookup_table;
 }
 
-std::string getConfigPath(int &argc, char **argv){
-  std::string ConfigPath {};  
+std::string getConfigPath(int &argc, char **argv)
+{
+  std::string ConfigPath{};
   int opt;
-  while ((opt = getopt(argc, argv, "c:")) != -1){
+  while ((opt = getopt(argc, argv, "c:")) != -1) {
     switch (opt) {
-      case 'c':
-        ConfigPath = optarg;
-        break;
+    case 'c':
+      ConfigPath = optarg;
+      break;
     }
   }
-  if (ConfigPath.empty()){
-     throw std::invalid_argument("Please -c Path to configfile"); 
+  if (ConfigPath.empty()) {
+    throw std::invalid_argument("Please -c Path to configfile");
   }
   return ConfigPath;
 }
 
-INIReader parseConfigFile(const std::string &path){
+INIReader parseConfigFile(const std::string &path)
+{
   fs::path p(path);
-  if (!fs::exists(p)){
-    throw std::invalid_argument("Configfile doesn't exist"); 
+  if (!fs::exists(p)) {
+    throw std::invalid_argument("Configfile doesn't exist");
   }
   INIReader reader(p.string());
   if (reader.ParseError() != 0) {
-       throw std::invalid_argument("Configfile " + p.string() + " couldn't be loaded");
+    throw std::invalid_argument("Configfile " + p.string() +
+                                " couldn't be loaded");
   }
-  return reader;  
-
-}
-
-
-Config getCL(int &argc, char **argv)
-{
-  Config runningConfig;
-  int opt;
-  while ((opt = getopt(argc, argv, "i:o:s:")) != -1) {
-    switch (opt) {
-    case 'o':
-      runningConfig.OutputPath = optarg;
-      break;
-    case 'i':
-      runningConfig.InputPath = optarg;
-      break;
-    case 's':
-      char *p = trimwhitespace(optarg);
-      strncpy(runningConfig.sep, p, 1);
-      runningConfig.sep[1] = '\0';
-      break;
-    }
-  }
-  if (runningConfig.OutputPath.empty() || runningConfig.InputPath.empty()) {
-    throw std::invalid_argument("Please use Input (-i) and Output Path (-o)");
-  }
-  return runningConfig;
+  return reader;
 }
 
 void goto_line(std::ifstream &file, unsigned long n)
@@ -212,7 +187,7 @@ void goto_line(std::ifstream &file, unsigned long n)
   }
 }
 
-void write_ts_header(std::ofstream &out,const  Config &conf)
+void write_ts_header(std::ofstream &out, const Config &conf)
 {
 
   out << "ts" << conf.sep << "mean" << conf.sep << "var" << conf.sep << "std"
@@ -292,6 +267,20 @@ void output_particle_ts(const Config &runningConf,
   check_path(p);
   auto le = mat.cols();
   auto ts_len = ts.size();
+  std::vector<std::pair<std::string, double>> averages_pair;
+  auto averages_mat = mat.colwise().sum() / mat.rows();
+  for (unsigned int i = 0; i < le; i++) {
+    auto col = averages_mat.col(i);
+    averages_pair.push_back(std::make_pair(inv_vertice_map.at(i),col.value()));
+  }
+  std::sort(averages_pair.begin(), averages_pair.end(), cmp_second<std::string, double>);
+  auto n = get_percentile_index(averages_pair, 0.9);
+  for (auto i = averages_pair.begin() + n; i != averages_pair.end(); ++i){
+      BOOST_LOG_TRIVIAL(info) << (*i).first << ": " << (*i).second;  
+  }
+  //std::copy (averages_pair.begin() + n, averages_pair.end(),std::inserter();
+
+  /*
   for (unsigned int i = 0; i < le; i++){
     auto col = mat.col(i);
     std::ofstream ts_file(p.string() + "/" +
@@ -302,14 +291,14 @@ void output_particle_ts(const Config &runningConf,
         ts_file << ts[j] << runningConf.sep << col(j) << "\n";
     }
     ts_file.close();
-  }
+  }*/
 }
 
-
-Config getGridConfigObj(INIReader &reader){
+Config getGridConfigObj(INIReader &reader)
+{
   Config conf;
-  conf.InputPath=reader.Get("grid", "inputPath","");
-  conf.OutputPath=reader.Get("grid", "outputPath","");
+  conf.InputPath = reader.Get("grid", "inputPath", "");
+  conf.OutputPath = reader.Get("grid", "outputPath", "");
   conf.x_cells = static_cast<int>(reader.GetInteger("grid", "x_cells", 0));
   conf.y_cells = static_cast<int>(reader.GetInteger("grid", "y_cells", 0));
   conf.z_cells = static_cast<int>(reader.GetInteger("grid", "z_cells", 0));
@@ -319,17 +308,23 @@ Config getGridConfigObj(INIReader &reader){
   return conf;
 }
 
+Config getBetweennessConfigObj(INIReader &reader)
+{
+  Config conf;
+  conf.InputPath = reader.Get("betweenness", "inputPath", "");
+  conf.OutputPath = reader.Get("betweenness", "outputPath", "");
+  conf.output_percentile = reader.GetReal("betweenness", "outputPercentile", 0.9);
+  return conf;
+}
 
-std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y, std::vector<int> &z){
+std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
+                                      std::vector<int> &z)
+{
   std::vector<cell> cellset;
-  for (auto& elem_x: x){
-    for (auto& elem_y: y){
-      for (auto& elem_z: z){
-        cellset.push_back(cell{
-          .x = elem_x,
-          .y = elem_y,
-          .z = elem_z
-        });
+  for (auto &elem_x : x) {
+    for (auto &elem_y : y) {
+      for (auto &elem_z : z) {
+        cellset.push_back(cell{.x = elem_x, .y = elem_y, .z = elem_z});
       }
     }
   }

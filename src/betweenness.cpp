@@ -14,6 +14,7 @@
 #include "betweenness.h"
 #include "natural_sort.hpp"
 #include "utils.h"
+#include "INIReader.h"
 #include <Eigen/Eigen>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/console.hpp>
@@ -37,6 +38,7 @@ int main(int argc, char **argv)
   boost::mpi::communicator world;
   boost::mpi::communicator tscom(world, boost::mpi::comm_duplicate);
   Config runningConf{};
+  std::string configPath;
   std::map<int, std::string> inv_vertice_map{};
   std::map<std::string, int> vertice_map{};
   std::vector<std::string> keys{};
@@ -52,6 +54,7 @@ int main(int argc, char **argv)
   gethostname(hostname, HOSTNAME_LEN);
 
   if (rank == MASTER) {
+    INIReader reader;
     // MASTER CODE
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Node betweenness centrality";
@@ -61,15 +64,21 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Hostname MASTER: " << hostname;
     try {
-      runningConf = getCL(argc, argv);
+      configPath = getConfigPath(argc, argv);
     }
     catch (std::invalid_argument e) {
       BOOST_LOG_TRIVIAL(info) << e.what() << std::endl;
       exit(EXIT_FAILURE);
     }
-
+    try {
+      reader = parseConfigFile(configPath);
+    }
+    catch (std::invalid_argument e) {
+      BOOST_LOG_TRIVIAL(info) << e.what() << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    runningConf = getBetweennessConfigObj(reader);
     // define pattern fro globbing chain files, trim strings, and glob
-
     std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
     std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
     xyzpattern = trim(xyzpattern);

@@ -1,22 +1,22 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include "INIReader.h"
 #include "data.h"
 #include <Eigen/Eigen>
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <cassert>
+#include <cmath>
 #include <deque>
 #include <functional>
 #include <iomanip>
 #include <iterator>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <set>
-#include "INIReader.h"
-
 
 std::vector<std::string> glob(const std::string &pattern);
 std::deque<std::string> glob_deq(const std::string &pattern);
@@ -28,11 +28,13 @@ std::map<std::string, int>
 get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile);
 std::vector<double>
 get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
-Config getCL(int &argc, char **argv);
 std::string getConfigPath(int &argc, char **argv);
+Config getBetweennessConfigObj(INIReader &reader);
 INIReader parseConfigFile(const std::string &path);
 void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
+bool cmp_avg_map(const std::pair<std::string, double> &a,
+                 const std::pair<std::string, double> &b);
 void write_ts_header(std::ofstream &out, const Config &conf);
 void write_cent_header(std::ofstream &out, const Config &conf);
 void output_centrality_ts(std::ofstream &ts_mean_file,
@@ -43,7 +45,8 @@ void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
                         const std::vector<long> &ts);
-std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y, std::vector<int> &z);
+std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
+                                      std::vector<int> &z);
 
 inline void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);
@@ -89,7 +92,8 @@ template <typename K, typename V> std::vector<V> getVals(std::map<K, V> &map)
 }
 
 template <typename K, typename V>
-std::map<K, V> constructMap(const std::vector<K> &keys, const std::vector<V> &vals)
+std::map<K, V> constructMap(const std::vector<K> &keys,
+                            const std::vector<V> &vals)
 {
   std::map<K, V> v_map;
   std::transform(keys.begin(), keys.end(), vals.begin(),
@@ -114,6 +118,28 @@ template <typename T> std::string convFillString(T &num, int len)
   std::ostringstream oss;
   oss << std::setfill('0') << std::setw(len) << num;
   return oss.str();
+}
+
+template <typename K, typename V>
+std::vector<std::pair<K, V>> get_vec_of_pairs(std::map<K, V> &map)
+{
+  std::vector<std::pair<K, V>> pair_vec;
+  for (auto &kv : map) {
+    pair_vec.push_back(std::make_pair(kv.first, kv.second));
+  }
+  return pair_vec;
+}
+
+template <typename T>
+size_t get_percentile_index(std::vector<T> &valVec, double percentile)
+{ 
+  return std::ceil(percentile * valVec.size()) - 1;
+}
+
+template <typename K, typename V>
+bool cmp_second(const std::pair<K, V> &a, const std::pair<K, V> &b)
+{
+  return a.second < b.second;
 }
 
 #endif

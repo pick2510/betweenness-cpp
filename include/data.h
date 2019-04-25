@@ -39,6 +39,7 @@ private:
     ar &domainsize_x;
     ar &domainsize_y;
     ar &domainsize_z;
+    ar &output_percentile;
   }
 
 public:
@@ -51,6 +52,7 @@ public:
   double domainsize_x = 0.0;
   double domainsize_y = 0.0;
   double domainsize_z = 0.0;
+  double output_percentile = 0.9;
 };
 
 struct Result {

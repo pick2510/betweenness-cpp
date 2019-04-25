@@ -141,7 +141,7 @@ void LogConfig(Config &conf)
 {
   BOOST_LOG_TRIVIAL(info) << "Using Input: " << conf.InputPath;
   BOOST_LOG_TRIVIAL(info) << "Using Output: " << conf.OutputPath;
-  BOOST_LOG_TRIVIAL(info) << "x_cells : " << conf.x_cells;
+  BOOST_LOG_TRIVIAL(info) << "x_cells: " << conf.x_cells;
   BOOST_LOG_TRIVIAL(info) << "y_cells: " << conf.y_cells;
   BOOST_LOG_TRIVIAL(info) << "z_cells: " << conf.z_cells;
   BOOST_LOG_TRIVIAL(info) << "Domain size: " << conf.domainsize_x << "x"
