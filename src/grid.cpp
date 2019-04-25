@@ -15,12 +15,12 @@
 #include <vector>
 
 #include "INIReader.h"
+#include "decomposition.h"
 #include "dumpfile.h"
 #include "grid.h"
 #include "natural_sort.hpp"
 #include "sqlite_orm.h"
 #include "utils.h"
-#include "decomposition.h"
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
@@ -55,11 +55,10 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
   Config runningConf = getGridConfigObj(reader);
+  LogConfig(runningConf);
   Decomposition decomp(runningConf);
   std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
   std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
-  BOOST_LOG_TRIVIAL(info) << "Using Input: " << runningConf.InputPath;
-  BOOST_LOG_TRIVIAL(info) << "Using Output: " << runningConf.OutputPath; 
   xyzpattern = trim(xyzpattern);
   chainpattern = trim(chainpattern);
   auto chain_file_list = glob_deq(chainpattern);
@@ -134,4 +133,15 @@ int main(int argc, char **argv)
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   return EXIT_SUCCESS;
+}
+
+void LogConfig(Config &conf)
+{
+  BOOST_LOG_TRIVIAL(info) << "Using Input: " << conf.InputPath;
+  BOOST_LOG_TRIVIAL(info) << "Using Output: " << conf.OutputPath;
+  BOOST_LOG_TRIVIAL(info) << "x_cells : " << conf.x_cells;
+  BOOST_LOG_TRIVIAL(info) << "y_cells: " << conf.y_cells;
+  BOOST_LOG_TRIVIAL(info) << "z_cells: " << conf.z_cells;
+  BOOST_LOG_TRIVIAL(info) << "Domain size: " << conf.domainsize_x << "x"
+                          << conf.domainsize_y << "x" << conf.domainsize_z;
 }

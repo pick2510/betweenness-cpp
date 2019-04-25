@@ -3,6 +3,9 @@
 #include "data.h"
 #include "sqlite_orm.h"
 
+
+void LogConfig(Config &conf);
+
 inline auto initStorage(const std::string &path)
 {
   using namespace sqlite_orm;
