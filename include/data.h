@@ -40,6 +40,7 @@ private:
     ar &domainsize_y;
     ar &domainsize_z;
     ar &output_percentile;
+    ar &randomly_selected;
   }
 
 public:
@@ -53,6 +54,7 @@ public:
   double domainsize_y = 0.0;
   double domainsize_z = 0.0;
   double output_percentile = 0.9;
+  int randomly_selected = 20;
 };
 
 struct Result {

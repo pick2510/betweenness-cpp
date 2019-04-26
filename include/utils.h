@@ -51,6 +51,7 @@ void output_particle_ts(const Config &runningConf,
                         const std::vector<long> &ts);
 std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
                                       std::vector<int> &z);
+void shuffleParticles(std::vector<int> &shuffleVec);
 
 inline void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);
@@ -135,9 +136,11 @@ std::vector<std::pair<K, V>> get_vec_of_pairs(std::map<K, V> &map)
 }
 
 template <typename T>
-size_t get_percentile_index(std::vector<T> &valVec, double percentile)
+typename std::vector<T>::iterator get_percentile_iterator(std::vector<T> &valVec, double percentile)
 { 
-  return std::ceil(percentile * valVec.size()) - 1;
+  auto n = std::ceil(percentile * valVec.size()) - 1;
+  return valVec.begin() + n;
+
 }
 
 template <typename K, typename V>
@@ -145,5 +148,6 @@ bool cmp_second(const std::pair<K, V> &a, const std::pair<K, V> &b)
 {
   return a.second < b.second;
 }
+
 
 #endif

@@ -7,6 +7,7 @@
 #include <glob.h>
 #include <iostream>
 #include <map>
+#include <random>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -258,29 +259,27 @@ void output_centrality_ts(std::ofstream &ts_mean_file,
   }
 }
 
-
-void output_particle_complete_ts(const Config &runningConf,
-                        const Eigen::Map<Eigen::MatrixXd> &mat,
-                        const std::map<int, std::string> &inv_vertice_map,
-                        const std::vector<long> &ts)
+void output_particle_complete_ts(
+    const Config &runningConf, const Eigen::Map<Eigen::MatrixXd> &mat,
+    const std::map<int, std::string> &inv_vertice_map,
+    const std::vector<long> &ts)
 {
   auto p = fs::path(runningConf.OutputPath + "/" + ts_particle_path);
   check_path(p);
   auto le = mat.cols();
   auto ts_len = ts.size();
-  for (unsigned int i = 0; i < le; i++){
+  for (unsigned int i = 0; i < le; i++) {
     auto col = mat.col(i);
     std::ofstream ts_file(p.string() + "/" +
                           convFillString(inv_vertice_map.at(i), 5) + ".csv");
     ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     ts_file << "ts" << runningConf.sep << "centrality\n";
-    for (unsigned int j = 0; j < ts_len; j++){
-        ts_file << ts[j] << runningConf.sep << col(j) << "\n";
+    for (unsigned int j = 0; j < ts_len; j++) {
+      ts_file << ts[j] << runningConf.sep << col(j) << "\n";
     }
     ts_file.close();
   }
 }
-
 
 void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
@@ -288,34 +287,68 @@ void output_particle_ts(const Config &runningConf,
                         const std::vector<long> &ts)
 {
   auto p = fs::path(runningConf.OutputPath + "/" + ts_particle_path);
-  check_path(p);
+  auto p_q = p / "quantiles";
+  auto p_r = p / "random";
+  check_path(p_q);
+  check_path(p_r);
   auto le = mat.cols();
   auto ts_len = ts.size();
-  std::vector<std::pair<std::string, double>> averages_pair;
+  std::vector<std::pair<unsigned int, double>> averages_pair;
+  std::vector<int> ids;
   auto averages_mat = mat.colwise().sum() / mat.rows();
   for (unsigned int i = 0; i < le; i++) {
     auto col = averages_mat.col(i);
-    averages_pair.push_back(std::make_pair(inv_vertice_map.at(i),col.value()));
+    averages_pair.push_back(std::make_pair(i, col.value()));
+    ids.push_back(i);
   }
-  std::sort(averages_pair.begin(), averages_pair.end(), cmp_second<std::string, double>);
-  auto n = get_percentile_index(averages_pair, 0.9);
-  for (auto i = averages_pair.begin() + n; i != averages_pair.end(); ++i){
-      BOOST_LOG_TRIVIAL(info) << (*i).first << ": " << (*i).second;  
-  }
-  //std::copy (averages_pair.begin() + n, averages_pair.end(),std::inserter();
-
-  /*
-  for (unsigned int i = 0; i < le; i++){
-    auto col = mat.col(i);
-    std::ofstream ts_file(p.string() + "/" +
-                          convFillString(inv_vertice_map.at(i), 5) + ".csv");
+  std::sort(averages_pair.begin(), averages_pair.end(),
+            cmp_second<unsigned int, double>);
+  auto n =
+      get_percentile_iterator(averages_pair, runningConf.output_percentile);
+  for (auto i = n; i != averages_pair.end(); ++i) {
+    auto col = mat.col((*i).first);
+    std::ofstream ts_file(p_q.string() + "/" +
+                          convFillString(inv_vertice_map.at((*i).first), 5) +
+                          ".csv");
     ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     ts_file << "ts" << runningConf.sep << "centrality\n";
-    for (unsigned int j = 0; j < ts_len; j++){
-        ts_file << ts[j] << runningConf.sep << col(j) << "\n";
+    for (unsigned int j = 0; j < ts_len; j++) {
+      ts_file << ts[j] << runningConf.sep << col(j) << "\n";
     }
     ts_file.close();
-  }*/
+  }
+  shuffleParticles(ids);
+  assert(runningConf.randomly_selected <= ids.size());
+
+  for (auto i = ids.begin(); i < ids.begin() + runningConf.randomly_selected;
+       ++i) {
+    auto col = mat.col(*i);
+    std::ofstream ts_file(p_r.string() + "/" +
+                          convFillString(inv_vertice_map.at(*i), 5) + ".csv");
+    ts_file << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+    ts_file << "ts" << runningConf.sep << "centrality\n";
+    for (unsigned int j = 0; j < ts_len; j++) {
+      ts_file << ts[j] << runningConf.sep << col(j) << "\n";
+    }
+
+    ts_file.close();
+  }
+}
+
+void shuffleParticles(std::vector<int> &shuffleVec)
+{
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  auto currentIndexCounter = shuffleVec.size();
+  for (auto iter = shuffleVec.rbegin(); iter != shuffleVec.rend();
+       ++iter, --currentIndexCounter) {
+    std::uniform_int_distribution<> dis(0, currentIndexCounter);
+    const int randomIndex = dis(mt);
+
+    if (*iter != shuffleVec.at(randomIndex)) {
+      std::swap(shuffleVec.at(randomIndex), *iter);
+    }
+  }
 }
 
 Config getGridConfigObj(INIReader &reader)
@@ -337,7 +370,9 @@ Config getBetweennessConfigObj(INIReader &reader)
   Config conf;
   conf.InputPath = reader.Get("betweenness", "inputPath", "");
   conf.OutputPath = reader.Get("betweenness", "outputPath", "");
-  conf.output_percentile = reader.GetReal("betweenness", "outputPercentile", 0.9);
+  conf.output_percentile =
+      reader.GetReal("betweenness", "outputPercentile", 0.9);
+  conf.randomly_selected = static_cast<int>(reader.GetInteger("betweenness", "randomlySelected", 20));
   return conf;
 }
 
