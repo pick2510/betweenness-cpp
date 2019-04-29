@@ -233,4 +233,9 @@ struct ts_column{
   long ts;
 };
 
+struct radius{
+  int id;
+  double rad;
+};
+
 #endif

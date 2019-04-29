@@ -71,11 +71,13 @@ int main(int argc, char **argv)
   auto radius_file = read_radius_file(radius_file_list[0]);
   radius_file.pop_back();
   std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
-  auto lookup_table = get_lookup_table(radius_file);
+  std::vector<double> lookup_table;
+  std::map<int, double> radius_map;
+  get_lookup_table(radius_file, lookup_table, radius_map);
   SI::natural::sort(chain_file_list);
   auto chain_size = chain_file_list.size();
-
-  auto storage = initStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  auto storage =
+      initStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
@@ -89,7 +91,7 @@ int main(int argc, char **argv)
 #pragma omp parallel for ordered
 #endif
   for (int i = 0; i < chain_size; i++) {
-    dumpfile Dump(chain_file_list[i], lookup_table, decomp);
+    dumpfile Dump(chain_file_list[i], radius_map, decomp);
     Dump.parse_file();
 #if defined(_OPENMP)
     omp_set_lock(&mutex);
@@ -129,21 +131,34 @@ int main(int argc, char **argv)
   omp_destroy_lock(&mutex);
 #endif
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
-  auto idx = indexStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  auto idx =
+      indexStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
   idx.pragma.journal_mode(journal_mode::WAL);
   idx.pragma.synchronous(0);
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
   std::sort(ts_vec.begin(), ts_vec.end());
   BOOST_LOG_TRIVIAL(info) << "Starting insert TS Table";
-  auto ts_table = inittsstorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  auto ts_table =
+      inittsstorage(runningConf.OutputPath + "/" + runningConf.db_filename);
   ts_table.sync_schema();
   ts_table.transaction([&] {
-      for (const auto &ts : ts_vec){
-          ts_table.insert(ts_column{.ts = ts});
-      }
-      return true;
+    for (const auto &ts : ts_vec) {
+      ts_table.insert(ts_column{.ts = ts});
+    }
+    return true;
   });
+  BOOST_LOG_TRIVIAL(info) << "Finished TS Table";
+  BOOST_LOG_TRIVIAL(info) << "Starting insert Radius Table";
+  auto rad_table =
+      initRadstorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  rad_table.sync_schema();
+  rad_table.transaction([&] {
+    for (const auto &r : radius_map) {
+      rad_table.insert(radius{.id = r.first, .rad = r.second});
+    }
+    return true;
+  });
+  BOOST_LOG_TRIVIAL(info) << "Finished insert TS Table";
   return EXIT_SUCCESS;
 }
-

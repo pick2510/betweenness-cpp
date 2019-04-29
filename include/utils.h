@@ -26,8 +26,10 @@ bool cmp_radii(const std::vector<std::string> &a,
 std::string trim(const std::string &s);
 std::map<std::string, int>
 get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile);
-std::vector<double>
-get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
+void get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile,
+                      std::vector<double> &lookup_table,
+                      std::map<int, double> &radius_map);
+std::vector<double> get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
 std::string getConfigPath(int &argc, char **argv);
 Config getBetweennessConfigObj(INIReader &reader);
 INIReader parseConfigFile(const std::string &path);
@@ -41,10 +43,10 @@ void output_centrality_ts(std::ofstream &ts_mean_file,
                           const Config &runningConf,
                           const std::vector<Result> &results,
                           const std::map<int, std::string> &inv_vertice_map);
-void output_particle_complete_ts(const Config &runningConf,
-                        const Eigen::Map<Eigen::MatrixXd> &mat,
-                        const std::map<int, std::string> &inv_vertice_map,
-                        const std::vector<long> &ts);
+void output_particle_complete_ts(
+    const Config &runningConf, const Eigen::Map<Eigen::MatrixXd> &mat,
+    const std::map<int, std::string> &inv_vertice_map,
+    const std::vector<long> &ts);
 void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
@@ -137,11 +139,11 @@ std::vector<std::pair<K, V>> get_vec_of_pairs(std::map<K, V> &map)
 }
 
 template <typename T>
-typename std::vector<T>::iterator get_percentile_iterator(std::vector<T> &valVec, double percentile)
-{ 
+typename std::vector<T>::iterator
+get_percentile_iterator(std::vector<T> &valVec, double percentile)
+{
   auto n = std::ceil(percentile * valVec.size()) - 1;
   return valVec.begin() + n;
-
 }
 
 template <typename K, typename V>
@@ -149,6 +151,5 @@ bool cmp_second(const std::pair<K, V> &a, const std::pair<K, V> &b)
 {
   return a.second < b.second;
 }
-
 
 #endif

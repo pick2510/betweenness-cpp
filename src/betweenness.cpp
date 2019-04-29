@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 
     radius_file.pop_back();
     std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
+    
     auto lookup_table = get_lookup_table(radius_file);
     vertice_map = get_vertice_map(radius_file);
     inv_vertice_map = inverse_map(vertice_map);

@@ -65,6 +65,20 @@ inline auto inittsstorage(const std::string &path)
 }
 
 
+inline auto initRadstorage(const std::string &path)
+{
+  using namespace sqlite_orm;
+  return make_storage(
+      path,
+      make_table(
+          "Radius",
+          make_column("particleid", &radius::id),
+          make_column("radius", &radius::rad)));
+
+}
+
+
+
 
 
 inline auto indexStorage(const std::string &path)

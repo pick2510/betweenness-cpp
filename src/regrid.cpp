@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "INIReader.h"
+#include "data.h"
 #include "decomposition.h"
 #include "dumpfile.h"
 #include "natural_sort.hpp"
@@ -33,7 +34,7 @@ int main(int argc, char **argv)
   std::string configPath{};
   INIReader reader;
   gethostname(hostname, HOSTNAME_LEN);
-  // MASTER CODE
+
   BOOST_LOG_TRIVIAL(info) << "****************************************";
   BOOST_LOG_TRIVIAL(info) << "Gridding of DEM Output files";
   BOOST_LOG_TRIVIAL(info) << "Calculates different properties";
@@ -56,6 +57,30 @@ int main(int argc, char **argv)
   }
   Config runningConf = getGridConfigObj(reader);
   LogConfig(runningConf);
-  auto stor = initStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
-  return 0;
+  const Decomposition decomp(runningConf);
+  const std::string path{runningConf.OutputPath + "/" +
+                         runningConf.db_filename};
+  std::map<int, double> radius_map;
+  auto stor = inittsstorage(path);
+  auto particles = indexStorage(path);
+  particles.sync_schema();
+  auto radius_storage = initRadstorage(path);
+  for (auto &elem : radius_storage.iterate<radius>()) {
+    radius_map[elem.id] = elem.rad;
+  }
+  auto ts_list = stor.get_all<ts_column>();
+  for (auto const ts : ts_list) {
+    auto selected_column = particles.get_all<ContactColumns>(
+        where(c(&ContactColumns::ts) == ts.ts));
+    for (auto &elem : selected_column) {
+      auto coord = dumpfile::calc_contactpoint(elem, radius_map);
+      auto cell = decomp.calc_cell_numeric(coord);
+      elem.cell_x = cell.x;
+      elem.cell_y = cell.y;
+      elem.cell_z = cell.z;
+      elem.cellstr = decomp.calc_cell(coord);
+    }
+    particles.update(selected_column);
+  }
+  return EXIT_SUCCESS;
 }
