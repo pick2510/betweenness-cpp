@@ -137,6 +137,7 @@ int main(int argc, char **argv)
   std::sort(ts_vec.begin(), ts_vec.end());
   BOOST_LOG_TRIVIAL(info) << "Starting insert TS Table";
   auto ts_table = inittsstorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  ts_table.sync_schema();
   ts_table.transaction([&] {
       for (const auto &ts : ts_vec){
           ts_table.insert(ts_column{.ts = ts});
