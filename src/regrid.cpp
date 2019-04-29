@@ -80,7 +80,7 @@ int main(int argc, char **argv)
       elem.cell_z = cell.z;
       elem.cellstr = decomp.calc_cell(coord);
     }
-    particles.update(selected_column);
+    // particles.update(selected_column);
   }
   return EXIT_SUCCESS;
 }
