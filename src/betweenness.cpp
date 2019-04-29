@@ -217,7 +217,6 @@ int main(int argc, char **argv)
           << file << ". Send Result.\n";
       world.send(0, TAG_RESULT, res);
       tscom.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
-
       // Check if a new job is coming
       world.recv(0, TAG_BREAK, stop);
     }

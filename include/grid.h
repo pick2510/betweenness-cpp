@@ -53,6 +53,19 @@ inline auto initStorage(const std::string &path)
 }
 
 
+inline auto inittsstorage(const std::string &path)
+{
+  using namespace sqlite_orm;
+  return make_storage(
+      path,
+      make_table(
+          "TS",  
+          make_column("ts", &ts_column::ts)));
+
+}
+
+
+
 
 inline auto indexStorage(const std::string &path)
 {

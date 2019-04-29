@@ -52,6 +52,7 @@ void output_particle_ts(const Config &runningConf,
 std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
                                       std::vector<int> &z);
 void shuffleParticles(std::vector<int> &shuffleVec);
+void LogConfig(Config &conf);
 
 inline void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);

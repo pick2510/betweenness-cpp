@@ -17,13 +17,14 @@ private:
   const std::vector<double> radius;
   const Decomposition decomp;
   std::vector<ContactColumns> ts_file_column{};
-  int timestep;
+  long timestep;
   inline void set_fpointer(int n) { goto_line(file, n); }
   coordinate calc_contactpoint(ContactColumns &contact);
 
 public:
   dumpfile(const std::string &Path, const std::vector<double> &radius, const Decomposition &decomp);
   void parse_file();
+  long gettimestep() const {return timestep;}
   inline std::vector<ContactColumns> getData(){return ts_file_column;}
   ~dumpfile() { file.close(); };
 };

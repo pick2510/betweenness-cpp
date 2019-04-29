@@ -362,6 +362,7 @@ Config getGridConfigObj(INIReader &reader)
   conf.domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0);
   conf.domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0);
   conf.domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0);
+  conf.db_filename = reader.Get("grid", "fileName", "");
   return conf;
 }
 
@@ -388,4 +389,15 @@ std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
     }
   }
   return cellset;
+}
+
+void LogConfig(Config &conf)
+{
+  BOOST_LOG_TRIVIAL(info) << "Using Input: " << conf.InputPath;
+  BOOST_LOG_TRIVIAL(info) << "Using Output: " << conf.OutputPath;
+  BOOST_LOG_TRIVIAL(info) << "x_cells: " << conf.x_cells;
+  BOOST_LOG_TRIVIAL(info) << "y_cells: " << conf.y_cells;
+  BOOST_LOG_TRIVIAL(info) << "z_cells: " << conf.z_cells;
+  BOOST_LOG_TRIVIAL(info) << "Domain size: " << conf.domainsize_x << "x"
+                          << conf.domainsize_y << "x" << conf.domainsize_z;
 }

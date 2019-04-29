@@ -39,9 +39,14 @@ add_executable(betweenness
 add_executable(grid
   ./src/grid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
 
+add_executable(regrid
+  ./src/regrid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
+
 
 target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
+target_link_libraries(regrid ${Boost_LIBRARIES} sqlite3 dl pthread)
 target_link_libraries(grid ${Boost_LIBRARIES} sqlite3 dl pthread)
+
 
 # Add flags.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")

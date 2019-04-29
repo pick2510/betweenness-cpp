@@ -41,6 +41,7 @@ private:
     ar &domainsize_z;
     ar &output_percentile;
     ar &randomly_selected;
+    ar &db_filename;
   }
 
 public:
@@ -55,6 +56,7 @@ public:
   double domainsize_z = 0.0;
   double output_percentile = 0.9;
   int randomly_selected = 20;
+  std::string db_filename;
 };
 
 struct Result {
@@ -225,5 +227,10 @@ enum ParticleTXTColumns {
 
 constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));
 constexpr double Gstar = (6.5e11) / (4 * (2 - .25) * (1 + .25));
+
+
+struct ts_column{
+  long ts;
+};
 
 #endif

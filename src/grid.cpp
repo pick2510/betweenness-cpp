@@ -75,14 +75,14 @@ int main(int argc, char **argv)
   SI::natural::sort(chain_file_list);
   auto chain_size = chain_file_list.size();
 
-  using Storage = decltype(initStorage(""));
-  Storage storage = initStorage(runningConf.OutputPath + "/DEM.db");
+  auto storage = initStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
   storage.pragma.journal_mode(journal_mode::WAL);
   storage.pragma.synchronous(0);
   storage.sync_schema();
   std::atomic<long> index{0};
   double percent{0.0};
   std::vector<std::vector<ContactColumns>> chunk_res;
+  std::vector<long> ts_vec;
 #if defined(_OPENMP)
   omp_lock_t mutex;
   omp_init_lock(&mutex);
@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 #if defined(_OPENMP)
     omp_set_lock(&mutex);
 #endif
+    ts_vec.push_back(Dump.gettimestep());
     chunk_res.push_back(Dump.getData());
     index++;
     if (chunk_res.size() > 100) {
@@ -117,8 +118,8 @@ int main(int argc, char **argv)
         << percent << "% (" << index << " of " << chain_size << ") done";
   }
   storage.transaction([&] {
-    for (auto &column : chunk_res) {
-      for (auto &res : column) {
+    for (const auto &column : chunk_res) {
+      for (const auto &res : column) {
         storage.insert(res);
       }
     }
@@ -128,22 +129,20 @@ int main(int argc, char **argv)
   omp_destroy_lock(&mutex);
 #endif
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with index";
-  using Idx = decltype(indexStorage(""));
-  Idx idx = indexStorage(runningConf.OutputPath + "/DEM.db");
+  auto idx = indexStorage(runningConf.OutputPath + "/" + runningConf.db_filename);
   idx.pragma.journal_mode(journal_mode::WAL);
   idx.pragma.synchronous(0);
   idx.sync_schema();
   BOOST_LOG_TRIVIAL(info) << "Finished indexing";
+  std::sort(ts_vec.begin(), ts_vec.end());
+  BOOST_LOG_TRIVIAL(info) << "Starting insert TS Table";
+  auto ts_table = inittsstorage(runningConf.OutputPath + "/" + runningConf.db_filename);
+  ts_table.transaction([&] {
+      for (const auto &ts : ts_vec){
+          ts_table.insert(ts_column{.ts = ts});
+      }
+      return true;
+  });
   return EXIT_SUCCESS;
 }
 
-void LogConfig(Config &conf)
-{
-  BOOST_LOG_TRIVIAL(info) << "Using Input: " << conf.InputPath;
-  BOOST_LOG_TRIVIAL(info) << "Using Output: " << conf.OutputPath;
-  BOOST_LOG_TRIVIAL(info) << "x_cells: " << conf.x_cells;
-  BOOST_LOG_TRIVIAL(info) << "y_cells: " << conf.y_cells;
-  BOOST_LOG_TRIVIAL(info) << "z_cells: " << conf.z_cells;
-  BOOST_LOG_TRIVIAL(info) << "Domain size: " << conf.domainsize_x << "x"
-                          << conf.domainsize_y << "x" << conf.domainsize_z;
-}
