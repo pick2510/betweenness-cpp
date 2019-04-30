@@ -16,6 +16,7 @@ Decomposition::Decomposition(const Config &runningConf)
   dx = runningConf.domainsize_x / runningConf.x_cells;
   dy = runningConf.domainsize_y / runningConf.y_cells;
   dz = runningConf.domainsize_z / runningConf.z_cells;
+  BOOST_LOG_TRIVIAL(info) << "dx: " << dx << "dy: " << dy << "dz: " << dz;
   std::iota(x_range.begin(), x_range.end(), 0);
   std::iota(y_range.begin(), y_range.end(), 0);
   std::iota(z_range.begin(), z_range.end(), 0);
@@ -25,9 +26,9 @@ Decomposition::Decomposition(const Config &runningConf)
 std::string Decomposition::calc_cell(coordinate &coord) const
 {
   std::stringstream ss;
-  ss << "cell_" << std::setfill('0') << std::setw(2) << std::floor(coord.x / dx) << "_"
-     << std::setfill('0') << std::setw(2) << std::floor(coord.y / dy) << "_"
-     << std::setfill('0') << std::setw(2) << std::floor(coord.z / dz);
+  ss << "cell_" << std::setfill('0') << std::setw(2) << std::floor(coord.x / dx)
+     << "_" << std::setfill('0') << std::setw(2) << std::floor(coord.y / dy)
+     << "_" << std::setfill('0') << std::setw(2) << std::floor(coord.z / dz);
   return ss.str();
 }
 

@@ -71,8 +71,8 @@ void dumpfile::parse_file()
         std::stod(splitted_line[ContactTXTColumns::sliding_contact]);
     columns.ts = timestep;
     auto coord = dumpfile::calc_contactpoint(columns, radius);
-    auto cell = decomp.calc_cell_numeric(coord);
     columns.cellstr = decomp.calc_cell(coord);
+    auto cell = decomp.calc_cell_numeric(coord);
     columns.cell_x = cell.x;
     columns.cell_y = cell.y;
     columns.cell_z = cell.z;
@@ -90,12 +90,13 @@ coordinate dumpfile::calc_contactpoint(ContactColumns &contact,
     p1_r = p2_r;
   if (p2_r < 0)
     p2_r = p1_r;
+
   double da = p1_r / (p1_r + p2_r);
   Ab_x = contact.p2_x - contact.p1_x;
   Ab_y = contact.p2_y - contact.p1_y;
   Ab_z = contact.p2_z - contact.p1_z;
-  cm_x = p1_x + Ab_x * da;
-  cm_y = p1_y + Ab_y * da;
-  cm_z = p1_z + Ab_z * da;
+  cm_x = contact.p1_x + Ab_x * da;
+  cm_y = contact.p1_y + Ab_y * da;
+  cm_z = contact.p1_z + Ab_z * da;
   return coordinate{.x = cm_x, .y = cm_y, .z = cm_z};
 }

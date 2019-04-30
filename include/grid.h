@@ -3,7 +3,6 @@
 #include "data.h"
 #include "sqlite_orm.h"
 
-
 void LogConfig(Config &conf);
 
 inline auto initStorage(const std::string &path)
@@ -12,7 +11,8 @@ inline auto initStorage(const std::string &path)
   return make_storage(
       path,
       make_table(
-          "ParticleContact",  
+          "ParticleContact",
+          make_column("id", &ContactColumns::id, primary_key()),
           make_column("p1_x", &ContactColumns::p1_x),
           make_column("p1_y", &ContactColumns::p1_y),
           make_column("p1_z", &ContactColumns::p1_z),
@@ -52,43 +52,29 @@ inline auto initStorage(const std::string &path)
           make_column("cellstr", &ContactColumns::cellstr)));
 }
 
-
 inline auto inittsstorage(const std::string &path)
 {
   using namespace sqlite_orm;
-  return make_storage(
-      path,
-      make_table(
-          "TS",  
-          make_column("ts", &ts_column::ts)));
-
+  return make_storage(path,
+                      make_table("TS", make_column("ts", &ts_column::ts)));
 }
-
 
 inline auto initRadstorage(const std::string &path)
 {
   using namespace sqlite_orm;
-  return make_storage(
-      path,
-      make_table(
-          "Radius",
-          make_column("particleid", &radius::id),
-          make_column("radius", &radius::rad)));
-
+  return make_storage(path, make_table("Radius",
+                                       make_column("particleid", &radius::id),
+                                       make_column("radius", &radius::rad)));
 }
-
-
-
-
 
 inline auto indexStorage(const std::string &path)
 {
   using namespace sqlite_orm;
   return make_storage(
-      path,
-      make_index("idx_ts_cellstr", &ContactColumns::ts),
+      path, make_index("idx_ts_cellstr", &ContactColumns::ts),
       make_table(
-          "ParticleContact",  
+          "ParticleContact",
+          make_column("id", &ContactColumns::id, primary_key()),
           make_column("p1_x", &ContactColumns::p1_x),
           make_column("p1_y", &ContactColumns::p1_y),
           make_column("p1_z", &ContactColumns::p1_z),

@@ -94,6 +94,7 @@ constexpr char ts_particle_path[] = "particles";
 constexpr char ts_centrality_path[] = "centrality";
 
 struct ContactColumns {
+  long id;
   double p1_x;
   double p1_y;
   double p1_z;
@@ -228,12 +229,11 @@ enum ParticleTXTColumns {
 constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));
 constexpr double Gstar = (6.5e11) / (4 * (2 - .25) * (1 + .25));
 
-
-struct ts_column{
+struct ts_column {
   long ts;
 };
 
-struct radius{
+struct radius {
   int id;
   double rad;
 };

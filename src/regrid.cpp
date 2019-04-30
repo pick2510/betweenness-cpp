@@ -72,6 +72,7 @@ int main(int argc, char **argv)
   for (auto const ts : ts_list) {
     auto selected_column = particles.get_all<ContactColumns>(
         where(c(&ContactColumns::ts) == ts.ts));
+    particles.begin_transaction();
     for (auto &elem : selected_column) {
       auto coord = dumpfile::calc_contactpoint(elem, radius_map);
       auto cell = decomp.calc_cell_numeric(coord);
@@ -79,7 +80,9 @@ int main(int argc, char **argv)
       elem.cell_y = cell.y;
       elem.cell_z = cell.z;
       elem.cellstr = decomp.calc_cell(coord);
+      particles.update(elem);
     }
+    particles.commit();
     // particles.update(selected_column);
   }
   return EXIT_SUCCESS;
