@@ -31,21 +31,24 @@ ADD_LIBRARY(sqlite3 STATIC
 
 # Core library. *.cpp should be added here.
 
+add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
+
+
 # Main entry point.
 add_executable(betweenness
-  ./src/betweenness.cpp ./src/utils.cpp ./src/graph.cpp)
+  ./src/betweenness.cpp)
 
 
 add_executable(grid
-  ./src/grid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
+  ./src/grid.cpp)
 
 add_executable(regrid
-  ./src/regrid.cpp ./src/utils.cpp ./src/graph.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
+  ./src/regrid.cpp)
 
 
-target_link_libraries(betweenness ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
-target_link_libraries(regrid ${Boost_LIBRARIES} sqlite3 dl pthread)
-target_link_libraries(grid ${Boost_LIBRARIES} sqlite3 dl pthread)
+target_link_libraries(betweenness demtools ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
+target_link_libraries(regrid demtools ${Boost_LIBRARIES} sqlite3 dl pthread)
+target_link_libraries(grid demtools ${Boost_LIBRARIES} sqlite3 dl pthread)
 
 
 # Add flags.

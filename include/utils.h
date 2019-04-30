@@ -29,7 +29,8 @@ get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile);
 void get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile,
                       std::vector<double> &lookup_table,
                       std::map<int, double> &radius_map);
-std::vector<double> get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
+std::vector<double>
+get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
 std::string getConfigPath(int &argc, char **argv);
 Config getBetweennessConfigObj(INIReader &reader);
 INIReader parseConfigFile(const std::string &path);
@@ -51,8 +52,9 @@ void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
                         const std::vector<long> &ts);
-std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
-                                      std::vector<int> &z);
+std::vector<std::string> getCartesianProduct(std::vector<int> &x,
+                                             std::vector<int> &y,
+                                             std::vector<int> &z);
 void shuffleParticles(std::vector<int> &shuffleVec);
 void LogConfig(Config &conf);
 

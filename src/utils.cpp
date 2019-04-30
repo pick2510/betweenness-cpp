@@ -392,14 +392,19 @@ Config getBetweennessConfigObj(INIReader &reader)
   return conf;
 }
 
-std::vector<cell> getCartesianProduct(std::vector<int> &x, std::vector<int> &y,
-                                      std::vector<int> &z)
+std::vector<std::string> getCartesianProduct(std::vector<int> &x,
+                                             std::vector<int> &y,
+                                             std::vector<int> &z)
 {
-  std::vector<cell> cellset;
+  std::vector<std::string> cellset;
   for (auto &elem_x : x) {
     for (auto &elem_y : y) {
       for (auto &elem_z : z) {
-        cellset.push_back(cell{.x = elem_x, .y = elem_y, .z = elem_z});
+        std::stringstream ss;
+        ss << "cell_" << std::setfill('0') << std::setw(2) << elem_x << "_"
+           << std::setfill('0') << std::setw(2) << elem_y << "_"
+           << std::setfill('0') << std::setw(2) << elem_z;
+        cellset.push_back(ss.str());
       }
     }
   }

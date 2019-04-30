@@ -10,7 +10,7 @@ class Decomposition {
 private:
   const Config runningConf;
   double dx, dy, dz;
-  std::vector<cell> cells;
+  std::vector<std::string> cells;
   std::vector<int> x_range, y_range, z_range;
 
 public:
