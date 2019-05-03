@@ -18,7 +18,7 @@ GraphSQLite<T>::GraphSQLite(const std::map<std::string, int> &vertices_map,
     : v_map{vertices_map}, graph{vertices_map.size()}, timestep{timestep}
 {
   std::string path{storage};
-  T db = initStorage(path);
+  db = initStorage(path);
   BOOST_LOG_TRIVIAL(info) << timestep;
   BOOST_LOG_TRIVIAL(info) << "Initialized";
 }
