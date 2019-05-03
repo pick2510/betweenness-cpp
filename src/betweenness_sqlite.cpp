@@ -9,12 +9,13 @@
 #include <string>
 #include <vector>
 
+#include "INIReader.h"
+#include "betweenness_sqlite.h"
 #include "data.h"
-#include "graph.h"
-#include "betweenness.h"
+#include "graph_sqlite.h"
+#include "grid.h"
 #include "natural_sort.hpp"
 #include "utils.h"
-#include "INIReader.h"
 #include <Eigen/Eigen>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/console.hpp>
@@ -28,8 +29,6 @@
 #include <boost/serialization/vector.hpp>
 #include <unistd.h>
 
-
-
 int main(int argc, char **argv)
 {
   // Initialize global object
@@ -39,14 +38,15 @@ int main(int argc, char **argv)
   boost::mpi::communicator tscom(world, boost::mpi::comm_duplicate);
   Config runningConf{};
   std::string configPath;
+  std::map<int, double> radius_map;
   std::map<int, std::string> inv_vertice_map{};
   std::map<std::string, int> vertice_map{};
   std::vector<std::string> keys{};
   std::vector<int> vals{};
   std::vector<Result> results{};
-  std::vector<std::string> radius_file_list{};
-  std::deque<std::string> chain_file_list{};
-  std::vector<long> ts{};
+  std::deque<long> ts{};
+  std::vector<long> ts_res{};
+  std::string path{};
   double *ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
@@ -77,26 +77,24 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(info) << e.what() << std::endl;
       exit(EXIT_FAILURE);
     }
-    runningConf = getBetweennessConfigObj(reader, "betweenness");
+    runningConf = getBetweennessConfigObj(reader, "betweenness_sqlite");
     // define pattern fro globbing chain files, trim strings, and glob
-    std::string chainpattern(runningConf.InputPath + "/postchain/*.chain");
-    std::string xyzpattern(runningConf.InputPath + "/postxyz/*.tet");
-    xyzpattern = trim(xyzpattern);
-    chainpattern = trim(chainpattern);
-    chain_file_list = glob_deq(chainpattern);
-    radius_file_list = glob(xyzpattern);
-    if (radius_file_list.empty()) {
-      BOOST_LOG_TRIVIAL(info) << "Need at least one file with radii *.tet\n";
-      world.abort(-255);
-      exit(EXIT_FAILURE);
-    }
-    auto radius_file = read_radius_file(radius_file_list[0]);
 
-    radius_file.pop_back();
-    std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
-    
-    auto lookup_table = get_lookup_table(radius_file);
-    vertice_map = get_vertice_map(radius_file);
+    path = std::string{runningConf.OutputPath + "/" + runningConf.db_filename};
+    auto stor = inittsstorage(path);
+    auto particles = indexStorage(path);
+    particles.sync_schema();
+    auto radius_storage = initRadstorage(path);
+    for (auto &elem : radius_storage.iterate<radius>()) {
+      radius_map[elem.id] = elem.rad;
+    }
+    auto ts_list = stor.get_all<ts_column>();
+    for (const auto &elem : ts_list) {
+      ts.push_back(elem.ts);
+    }
+    std::sort(ts.begin(), ts.end());
+    auto lookup_table = get_lookup_table(radius_map);
+    vertice_map = get_vertice_map(radius_map);
     inv_vertice_map = inverse_map(vertice_map);
     keys = getKeys(vertice_map);
     vals = getVals(vertice_map);
@@ -105,15 +103,15 @@ int main(int argc, char **argv)
   // Broadcast keys and vals vector for vertice_map reconstruction.
   broadcast(world, keys, MASTER);
   broadcast(world, vals, MASTER);
+  broadcast(world, path, MASTER);
 
   // MASTER CODE
 
   if (rank == MASTER) {
     // sanity check of file list
-    SI::natural::sort(chain_file_list);
-    t_len = chain_file_list.size();
+    t_len = ts.size();
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
-    results.resize(chain_file_list.size());
+    results.resize(t_len);
     auto p_size = vertice_map.size();
     // Check that processes are <= length of tasks
     if (world_size > t_len + 1) {
@@ -131,14 +129,14 @@ int main(int argc, char **argv)
     std::vector<boost::mpi::request> reqs_ts(reqs_world);
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
-      std::string file{chain_file_list.front()};
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << file
+      long timestep{ts.front()};
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
                               << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
       BOOST_LOG_TRIVIAL(info)
           << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-      world.send(dst_rank, TAG_FILE, file.data(), file.size());
-      chain_file_list.pop_front();
+      world.send(dst_rank, TAG_FILE, timestep);
+      ts.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank - 1] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index]);
@@ -146,7 +144,7 @@ int main(int argc, char **argv)
           dst_rank, TAG_PART_TS, &ts_particle[v_index++ * p_size], p_size);
     }
     bool stop = false;
-    while (chain_file_list.size() > 0) {
+    while (ts.size() > 0) {
       for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
         if (reqs_world[dst_rank - 1].test()) {
           reqs_ts[dst_rank - 1].wait();
@@ -158,14 +156,14 @@ int main(int argc, char **argv)
           world.send(dst_rank, TAG_BREAK, stop);
 
           // Send the new job.
-          std::string file{chain_file_list.front()};
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << file
+          long timestep{ts.front()};
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
                                   << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-          world.send(dst_rank, TAG_FILE, file.data(), file.size());
-          chain_file_list.pop_front();
+          world.send(dst_rank, TAG_FILE, timestep);
+          ts.pop_front();
           reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
           reqs_ts[dst_rank - 1] = tscom.irecv(
@@ -192,30 +190,24 @@ int main(int argc, char **argv)
     std::map<std::string, int> v_map = constructMap(keys, vals);
     bool stop = false;
     while (!stop) {
-      auto status = world.probe(0, TAG_FILE);
-      auto nbytes = status.count<char>();
-      char *f_recv = new char[nbytes.get() + 1]{};
+      long ts;
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
-      world.recv(0, TAG_FILE, f_recv, nbytes.get());
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
-                              << ") Recevied: " << nbytes.get() << " bytes";
-      std::string file(f_recv);
-      delete[] f_recv;
-      BOOST_LOG_TRIVIAL(info) << file;
+      world.recv(0, TAG_FILE, ts);
+      BOOST_LOG_TRIVIAL(info) << ts;
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
-                              << ") Received job " << file << " from MASTER.\n";
+                              << ") Received job " << ts << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Start Job\n";
-      Graph mygraph(file, v_map);
+      using t_stor = decltype(indexStorage(""));
+      GraphSQLite<t_stor> mygraph(v_map, path, ts);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Send result
-      BOOST_LOG_TRIVIAL(info)
-          << "[SLAVE: " << rank << "] (" << hostname << ") Done with job "
-          << file << ". Send Result.\n";
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
+                              << ") Done with job " << ts << ". Send Result.\n";
       world.send(0, TAG_RESULT, res);
       tscom.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
       // Check if a new job is coming
@@ -229,9 +221,9 @@ int main(int argc, char **argv)
 
   if (rank == MASTER) {
     std::sort(results.begin(), results.end(), cmp_ts);
-    ts.reserve(results.size());
+    ts_res.reserve(results.size());
     std::for_each(results.begin(), results.end(),
-                  [&ts](Result const &res) { ts.push_back(res.ts); });
+                  [&ts_res](Result const &res) { ts_res.push_back(res.ts); });
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +
@@ -241,7 +233,7 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
     Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle, t_len,
                                                 vertice_map.size());
-    output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts);
+    output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts_res);
     delete[] ts_particle;
   }
 }

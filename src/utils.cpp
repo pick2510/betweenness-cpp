@@ -135,6 +135,27 @@ get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile)
   return vertice_map;
 }
 
+std::map<std::string, int>
+get_vertice_map(const std::map<int, double> &radius_map)
+{
+  std::map<std::string, int> vertice_map;
+  int i = 0;
+  for (auto &elem : radius_map) {
+    vertice_map[std::to_string(elem.first)] = i++;
+  }
+
+  return vertice_map;
+}
+
+std::vector<double> get_lookup_table(const std::map<int, double> &radius_map)
+{
+  std::vector<double> lookup_table(radius_map.rbegin()->first + 1, 0);
+  for (const auto &elem : radius_map) {
+    lookup_table[elem.first] = elem.second;
+  }
+  return lookup_table;
+}
+
 void get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile,
                       std::vector<double> &lookup_table,
                       std::map<int, double> &radius_map)
@@ -380,15 +401,14 @@ Config getGridConfigObj(INIReader &reader)
   return conf;
 }
 
-Config getBetweennessConfigObj(INIReader &reader)
+Config getBetweennessConfigObj(INIReader &reader, const char *type)
 {
   Config conf;
-  conf.InputPath = reader.Get("betweenness", "inputPath", "");
-  conf.OutputPath = reader.Get("betweenness", "outputPath", "");
-  conf.output_percentile =
-      reader.GetReal("betweenness", "outputPercentile", 0.9);
-  conf.randomly_selected = static_cast<int>(
-      reader.GetInteger("betweenness", "randomlySelected", 20));
+  conf.InputPath = reader.Get(type, "inputPath", "");
+  conf.OutputPath = reader.Get(type, "outputPath", "");
+  conf.output_percentile = reader.GetReal(type, "outputPercentile", 0.9);
+  conf.randomly_selected =
+      static_cast<int>(reader.GetInteger(type, "randomlySelected", 20));
   return conf;
 }
 

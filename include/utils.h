@@ -25,14 +25,17 @@ bool cmp_radii(const std::vector<std::string> &a,
                const std::vector<std::string> &b);
 std::string trim(const std::string &s);
 std::map<std::string, int>
+get_vertice_map(const std::map<int, double> &radius_map);
+std::map<std::string, int>
 get_vertice_map(const std::vector<std::vector<std::string>> &radiusfile);
 void get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile,
                       std::vector<double> &lookup_table,
                       std::map<int, double> &radius_map);
 std::vector<double>
 get_lookup_table(const std::vector<std::vector<std::string>> &radiusfile);
+std::vector<double> get_lookup_table(const std::map<int, double> &radius_map);
 std::string getConfigPath(int &argc, char **argv);
-Config getBetweennessConfigObj(INIReader &reader);
+Config getBetweennessConfigObj(INIReader &reader, const char *type);
 INIReader parseConfigFile(const std::string &path);
 void goto_line(std::ifstream &file, unsigned long n);
 bool cmp_ts(const Result &a, const Result &b);
