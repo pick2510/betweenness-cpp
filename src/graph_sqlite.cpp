@@ -1,55 +1,42 @@
 #include "graph_sqlite.h"
-#include "data.h"
-#include "sqlite_orm.h"
-#include "utils.h"
-#include <boost/accumulators/statistics.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/betweenness_centrality.hpp>
-#include <boost/graph/iteration_macros.hpp>
-#include <boost/log/trivial.hpp>
-#include <iostream>
-#include <string>
 
-using namespace sqlite_orm;
-
-template <class T>
-GraphSQLite<T>::GraphSQLite(const std::map<std::string, int> &vertices_map,
-                            std::string &storage, long timestep)
-    : v_map{vertices_map}, graph{vertices_map.size()}, timestep{timestep}
+GraphSQLite::GraphSQLite(const std::map<std::string, int> &vertices_map,
+                         const std::string &stor, long timestep)
+    : v_map{vertices_map}, path{stor}, timestep{timestep}, graph{v_map.size()}
 {
-  std::string path{storage};
-  db = initStorage(path);
   BOOST_LOG_TRIVIAL(info) << timestep;
   BOOST_LOG_TRIVIAL(info) << "Initialized";
 }
 
-template <class T> void GraphSQLite<T>::calc()
+void GraphSQLite::calc()
 {
   generate_graph();
   calculate_betweenness_centrality();
   calculate_accumulator();
 }
 
-template <class T> void GraphSQLite<T>::calculate_accumulator()
+void GraphSQLite::calculate_accumulator()
 {
 
   for (auto &val : vals) {
+
     acc(val);
   }
   BOOST_LOG_TRIVIAL(info) << "Mean " << boost::accumulators::mean(acc);
 }
 
-template <class T> void GraphSQLite<T>::generate_graph()
+void GraphSQLite::generate_graph()
 {
-  auto columns = db.template get_all<ContactColumns>(
-      where(c(&ContactColumns::ts) == timestep));
+  auto db = indexStorage(path);
+  auto columns =
+      db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
   for (const auto &elem : columns) {
-    boost::add_edge(v_map.at(elem.p1_id), v_map.at(elem.p2_id), graph);
+    boost::add_edge(v_map.at(std::to_string(elem.p1_id)),
+                    v_map.at(std::to_string(elem.p2_id)), graph);
   }
   BOOST_LOG_TRIVIAL(info) << "Graph finished!";
 }
-
-template <class T> void GraphSQLite<T>::calculate_betweenness_centrality()
+void GraphSQLite::calculate_betweenness_centrality()
 {
   c_map = Centrality_Map(boost::num_vertices(graph),
                          boost::get(boost::vertex_index, graph));
@@ -66,19 +53,16 @@ template <class T> void GraphSQLite<T>::calculate_betweenness_centrality()
   std::sort(v_betweeness.begin(), v_betweeness.end());
 }
 
-template <class T> std::map<int, double> GraphSQLite<T>::get_centrality_map()
+std::map<int, double> GraphSQLite::get_centrality_map()
 {
   return constructMap(keys, vals);
 }
 
-template <class T> long GraphSQLite<T>::get_timestep() { return timestep; }
+long GraphSQLite::get_timestep() { return timestep; }
 
-template <class T> double GraphSQLite<T>::get_mean()
-{
-  return boost::accumulators::mean(acc);
-}
+double GraphSQLite::get_mean() { return boost::accumulators::mean(acc); }
 
-template <class T> Result GraphSQLite<T>::get_result()
+Result GraphSQLite::get_result()
 {
   Result res;
   res.keys = keys;
@@ -92,5 +76,4 @@ template <class T> Result GraphSQLite<T>::get_result()
   res.skew = accumulators::skewness(acc);
   return res;
 }
-
-template <class T> GraphSQLite<T>::~GraphSQLite() {}
+GraphSQLite::~GraphSQLite() {}

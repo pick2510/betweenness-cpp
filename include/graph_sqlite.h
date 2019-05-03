@@ -3,16 +3,21 @@
 
 #include "data.h"
 #include "grid.h"
+#include "sqlite_orm.h"
+#include "utils.h"
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics.hpp>
 #include <boost/array.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/adjacency_matrix.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
+#include <boost/graph/iteration_macros.hpp>
+#include <boost/log/trivial.hpp>
 #include <fstream>
 #include <string>
 #include <vector>
 
+using Storage = decltype(indexStorage(""));
+using namespace sqlite_orm;
 namespace tags = boost::accumulators::tag;
 namespace accumulators = boost::accumulators;
 
@@ -26,22 +31,21 @@ typedef accumulators::accumulator_set<
                                    tags::kurtosis>>
     Acc;
 
-template <class T> class GraphSQLite {
+class GraphSQLite {
   static constexpr int begin_line = 9;
   static constexpr int ts_line = 1;
 
 private:
-  std::vector<std::vector<std::string>> filecontent;
   Centrality_Map c_map;
-  std::string path;
   const std::map<std::string, int> &v_map;
+  const std::string path;
+  long timestep;
+  // Storage db;
   // std::map<int, double> betweenness_centrality;
-  T db;
   std::vector<int> keys;
   std::vector<double> vals;
   std::vector<double> v_betweeness;
   Dump_Graph graph;
-  long timestep;
   Acc acc;
   void generate_graph();
   void calculate_betweenness_centrality();
@@ -49,7 +53,7 @@ private:
 
 public:
   GraphSQLite(const std::map<std::string, int> &vertices_map,
-              std::string &storage, long ts);
+              const std::string &stor, long ts);
   Result get_result();
   void calc();
   std::map<int, double> get_centrality_map();

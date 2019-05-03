@@ -34,6 +34,7 @@ ADD_LIBRARY(sqlite3 STATIC
 add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp ./src/graph_sqlite.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
 
 
+
 # Main entry point.
 add_executable(betweenness
   ./src/betweenness.cpp)

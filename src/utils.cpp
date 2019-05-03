@@ -409,6 +409,7 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
   conf.output_percentile = reader.GetReal(type, "outputPercentile", 0.9);
   conf.randomly_selected =
       static_cast<int>(reader.GetInteger(type, "randomlySelected", 20));
+  conf.db_filename = reader.Get(type, "fileName", "");
   return conf;
 }
 

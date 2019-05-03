@@ -201,8 +201,7 @@ int main(int argc, char **argv)
       // Perform "job"
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Start Job\n";
-      using t_stor = decltype(indexStorage(""));
-      GraphSQLite<t_stor> mygraph(v_map, path, ts);
+      GraphSQLite mygraph(v_map, path, ts);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Send result
