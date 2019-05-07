@@ -29,7 +29,7 @@ void GraphSQLite::calculate_accumulator()
 
 void GraphSQLite::generate_graph()
 {
-  // auto db = indexStorage(path);
+  // auto db = indexContactStorage(path);
   // auto columns =
   //   db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
   for (const auto &elem : cols) {

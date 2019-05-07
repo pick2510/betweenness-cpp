@@ -81,9 +81,10 @@ int main(int argc, char **argv)
     runningConf = getBetweennessConfigObj(reader, "betweenness_sqlite");
     // define pattern fro globbing chain files, trim strings, and glob
 
-    path = std::string{runningConf.InputPath + "/" + runningConf.db_filename};
-    auto stor = inittsstorage(path);
-    auto particles = indexStorage(path);
+    path =
+        std::string{runningConf.InputPath + "/" + runningConf.contact_filename};
+    auto stor = initTSStorage(path);
+    auto particles = indexContactStorage(path);
     particles.sync_schema();
     auto radius_storage = initRadstorage(path);
     for (auto &elem : radius_storage.iterate<radius>()) {
@@ -131,7 +132,7 @@ int main(int argc, char **argv)
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       long timestep{ts.front()};
-      auto db = indexStorage(path);
+      auto db = indexContactStorage(path);
       auto columns =
           db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
       auto col_size = columns.size();
@@ -164,7 +165,7 @@ int main(int argc, char **argv)
 
           // Send the new job.
           long timestep{ts.front()};
-          auto db = indexStorage(path);
+          auto db = indexContactStorage(path);
           auto columns = db.get_all<ContactColumns>(
               where(c(&ContactColumns::ts) == timestep));
           auto col_size = columns.size();

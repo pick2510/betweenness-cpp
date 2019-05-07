@@ -43,7 +43,8 @@ private:
     ar &domainsize_z;
     ar &output_percentile;
     ar &randomly_selected;
-    ar &db_filename;
+    ar &contact_filename;
+    ar &particle_filename;
   }
 
 public:
@@ -58,7 +59,8 @@ public:
   double domainsize_z = 0.0;
   double output_percentile = 0.9;
   int randomly_selected = 20;
-  std::string db_filename;
+  std::string contact_filename;
+  std::string particle_filename;
 };
 
 struct Result {
@@ -183,6 +185,41 @@ struct ContactColumns {
 };
 
 struct ParticleColumns {
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar, const unsigned int version)
+  {
+    ar &id;
+    ar &p_id;
+    ar &p_type;
+    ar &p_x;
+    ar &p_y;
+    ar &p_z;
+    ar &p_rad;
+    ar &p_vx;
+    ar &p_vy;
+    ar &p_vz;
+    ar &p_fx;
+    ar &p_fy;
+    ar &p_fz;
+    ar &p_omegax;
+    ar &p_omegay;
+    ar &p_omegaz;
+    ar &p_coord;
+    ar &p_disp_x;
+    ar &p_disp_y;
+    ar &p_disp_z;
+    ar &p_disp_mag;
+    ar &p_ke_rot;
+    ar &p_ke_tra;
+    ar &cell_x;
+    ar &cell_y;
+    ar &cell_z;
+    ar &ts;
+    ar &cellstr;
+  }
+
+  long id;
   int p_id;
   int p_type;
   double p_x;
@@ -271,6 +308,11 @@ enum ParticleTXTColumns {
   disp_mag,
   ke_rot,
   ke_tra
+};
+
+enum dumpfile_t {
+  particle,
+  contact
 };
 
 constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));

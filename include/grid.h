@@ -1,11 +1,33 @@
 #ifndef GRID_H
 #define GRID_H
 #include "data.h"
+#include "decomposition.h"
+#include "dumpfile.h"
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 #include "sqlite_orm.h"
+#include <atomic>
+#include <boost/log/trivial.hpp>
+#include <cmath>
+#include <deque>
+#include <memory>
+#include <string>
+#include <vector>
 
 void LogConfig(Config &conf);
 
-inline auto initStorage(const std::string &path)
+void processContacts(std::deque<std::string> &chain_file_list,
+                     std::map<int, double> &radius_map, Decomposition &decomp,
+                     std::vector<long> &ts_vec, std::size_t chain_size,
+                     std::atomic<long> &index,
+                     std::vector<std::vector<ContactColumns>> &chunk_res);
+void processParticles(std::vector<std::string> &radius_file_list,
+                      std::map<int, double> &radius_map, Decomposition &decomp,
+                      std::size_t part_size, std::atomic<long> &index,
+                      std::vector<std::vector<ParticleColumns>> &chunk_res);
+
+inline auto initContactStorage(const std::string &path)
 {
   using namespace sqlite_orm;
   return make_storage(
@@ -52,7 +74,7 @@ inline auto initStorage(const std::string &path)
           make_column("cellstr", &ContactColumns::cellstr)));
 }
 
-inline auto inittsstorage(const std::string &path)
+inline auto initTSStorage(const std::string &path)
 {
   using namespace sqlite_orm;
   return make_storage(path,
@@ -67,7 +89,7 @@ inline auto initRadstorage(const std::string &path)
                                        make_column("radius", &radius::rad)));
 }
 
-inline auto indexStorage(const std::string &path)
+inline auto indexContactStorage(const std::string &path)
 {
   using namespace sqlite_orm;
   return make_storage(
@@ -113,4 +135,79 @@ inline auto indexStorage(const std::string &path)
           make_column("ts", &ContactColumns::ts),
           make_column("cellstr", &ContactColumns::cellstr)));
 }
+
+inline auto ParticleStorage(const std::string &path)
+{
+  using namespace sqlite_orm;
+  return make_storage(
+      path, make_index("idx_ts_cellstr", &ParticleColumns::ts),
+      make_table("Particles",
+                 make_column("id", &ParticleColumns::id, primary_key()),
+                 make_column("p_id", &ParticleColumns::p_id),
+                 make_column("p_type", &ParticleColumns::p_type),
+                 make_column("p_x", &ParticleColumns::p_x),
+                 make_column("p_y", &ParticleColumns::p_y),
+                 make_column("p_z", &ParticleColumns::p_z),
+                 make_column("p_rad", &ParticleColumns::p_rad),
+                 make_column("p_vx", &ParticleColumns::p_vx),
+                 make_column("p_vy", &ParticleColumns::p_vy),
+                 make_column("p_vz", &ParticleColumns::p_vz),
+                 make_column("p_fx", &ParticleColumns::p_fx),
+                 make_column("p_fy", &ParticleColumns::p_fy),
+                 make_column("p_fz", &ParticleColumns::p_fz),
+                 make_column("p_omegax", &ParticleColumns::p_omegax),
+                 make_column("p_omegay", &ParticleColumns::p_omegay),
+                 make_column("p_omegaz", &ParticleColumns::p_omegaz),
+                 make_column("p_coord", &ParticleColumns::p_coord),
+                 make_column("p_disp_x", &ParticleColumns::p_disp_x),
+                 make_column("p_disp_y", &ParticleColumns::p_disp_y),
+                 make_column("p_disp_z", &ParticleColumns::p_disp_z),
+                 make_column("p_disp_mag", &ParticleColumns::p_disp_mag),
+                 make_column("p_ke_rot", &ParticleColumns::p_ke_rot),
+                 make_column("p_ke_tra", &ParticleColumns::p_ke_tra),
+                 make_column("cell_x", &ParticleColumns::cell_x),
+                 make_column("cell_y", &ParticleColumns::cell_y),
+                 make_column("cell_z", &ParticleColumns::cell_z),
+                 make_column("ts", &ParticleColumns::ts),
+                 make_column("cellstr", &ParticleColumns::cellstr)));
+}
+
+inline auto ParticleIndexStorage(const std::string &path)
+{
+  using namespace sqlite_orm;
+  return make_storage(
+      path, make_table("Particles",
+                       make_column("id", &ParticleColumns::id, primary_key()),
+                       make_column("p_id", &ParticleColumns::p_id),
+                       make_column("p_type", &ParticleColumns::p_type),
+                       make_column("p_x", &ParticleColumns::p_x),
+                       make_column("p_y", &ParticleColumns::p_y),
+                       make_column("p_z", &ParticleColumns::p_z),
+                       make_column("p_rad", &ParticleColumns::p_rad),
+                       make_column("p_vx", &ParticleColumns::p_vx),
+                       make_column("p_vy", &ParticleColumns::p_vy),
+                       make_column("p_vz", &ParticleColumns::p_vz),
+                       make_column("p_fx", &ParticleColumns::p_fx),
+                       make_column("p_fy", &ParticleColumns::p_fy),
+                       make_column("p_fz", &ParticleColumns::p_fz),
+                       make_column("p_omegax", &ParticleColumns::p_omegax),
+                       make_column("p_omegay", &ParticleColumns::p_omegay),
+                       make_column("p_omegaz", &ParticleColumns::p_omegaz),
+                       make_column("p_coord", &ParticleColumns::p_coord),
+                       make_column("p_disp_x", &ParticleColumns::p_disp_x),
+                       make_column("p_disp_y", &ParticleColumns::p_disp_y),
+                       make_column("p_disp_z", &ParticleColumns::p_disp_z),
+                       make_column("p_disp_mag", &ParticleColumns::p_disp_mag),
+                       make_column("p_ke_rot", &ParticleColumns::p_ke_rot),
+                       make_column("p_ke_tra", &ParticleColumns::p_ke_tra),
+                       make_column("cell_x", &ParticleColumns::cell_x),
+                       make_column("cell_y", &ParticleColumns::cell_y),
+                       make_column("cell_z", &ParticleColumns::cell_z),
+                       make_column("ts", &ParticleColumns::ts),
+                       make_column("cellstr", &ParticleColumns::cellstr)));
+}
+
+using c_storage_t = decltype(initContactStorage(""));
+using p_storage_t = decltype(ParticleStorage(""));
+
 #endif

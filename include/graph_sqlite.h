@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-using Storage = decltype(indexStorage(""));
+using Storage = decltype(indexContactStorage(""));
 using namespace sqlite_orm;
 namespace tags = boost::accumulators::tag;
 namespace accumulators = boost::accumulators;

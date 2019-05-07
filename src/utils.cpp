@@ -397,7 +397,8 @@ Config getGridConfigObj(INIReader &reader)
   conf.domainsize_x = reader.GetReal("grid", "domainsize_x", 0.0);
   conf.domainsize_y = reader.GetReal("grid", "domainsize_y", 0.0);
   conf.domainsize_z = reader.GetReal("grid", "domainsize_z", 0.0);
-  conf.db_filename = reader.Get("grid", "fileName", "");
+  conf.contact_filename = reader.Get("grid", "ContactfileName", "");
+  conf.particle_filename = reader.Get("grid", "ParticlefileName", "");
   return conf;
 }
 
@@ -409,7 +410,7 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
   conf.output_percentile = reader.GetReal(type, "outputPercentile", 0.9);
   conf.randomly_selected =
       static_cast<int>(reader.GetInteger(type, "randomlySelected", 20));
-  conf.db_filename = reader.Get(type, "fileName", "");
+  conf.contact_filename = reader.Get(type, "ContactfileName", "");
   return conf;
 }
 

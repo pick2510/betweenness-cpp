@@ -59,10 +59,10 @@ int main(int argc, char **argv)
   LogConfig(runningConf);
   const Decomposition decomp(runningConf);
   const std::string path{runningConf.OutputPath + "/" +
-                         runningConf.db_filename};
+                         runningConf.contact_filename};
   std::map<int, double> radius_map;
-  auto stor = inittsstorage(path);
-  auto particles = indexStorage(path);
+  auto stor = initTSStorage(path);
+  auto particles = indexContactStorage(path);
   particles.sync_schema();
   auto radius_storage = initRadstorage(path);
   for (auto &elem : radius_storage.iterate<radius>()) {

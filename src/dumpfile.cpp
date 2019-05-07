@@ -6,8 +6,8 @@
 #include <boost/log/trivial.hpp>
 
 dumpfile::dumpfile(const std::string &Path, const std::map<int, double> &radius,
-                   const Decomposition &decomp)
-    : file(Path, std::ios::in), radius(radius), decomp(decomp)
+                   const Decomposition &decomp, dumpfile_t type)
+    : file(Path, std::ios::in), radius(radius), decomp(decomp), type{type}
 {
   set_fpointer(dumpfile::ts_line);
   file >> timestep;
@@ -16,7 +16,7 @@ dumpfile::dumpfile(const std::string &Path, const std::map<int, double> &radius,
   BOOST_LOG_TRIVIAL(info) << "Initialized";
 }
 
-void dumpfile::parse_file()
+void dumpfile::parse_contacts()
 {
   std::string line;
   while (std::getline(file, line)) {
@@ -77,6 +77,58 @@ void dumpfile::parse_file()
     columns.cell_y = cell.y;
     columns.cell_z = cell.z;
     ts_file_column.push_back(columns);
+  }
+}
+
+void dumpfile::parse_particles()
+{
+  std::string line;
+  while (std::getline(file, line)) {
+    ParticleColumns columns{};
+    std::vector<std::string> splitted_line;
+    split_string(line, splitted_line);
+    columns.p_id = std::stoi(splitted_line[ParticleTXTColumns::id]);
+    columns.p_type = std::stoi(splitted_line[ParticleTXTColumns::type]);
+    columns.p_x = std::stod(splitted_line[ParticleTXTColumns::x]);
+    columns.p_y = std::stod(splitted_line[ParticleTXTColumns::y]);
+    columns.p_z = std::stod(splitted_line[ParticleTXTColumns::z]);
+    columns.p_rad = std::stod(splitted_line[ParticleTXTColumns::rad]);
+    columns.p_vx = std::stod(splitted_line[ParticleTXTColumns::vx]);
+    columns.p_vy = std::stod(splitted_line[ParticleTXTColumns::vy]);
+    columns.p_vz = std::stod(splitted_line[ParticleTXTColumns::vz]);
+    columns.p_fx = std::stod(splitted_line[ParticleTXTColumns::fx]);
+    columns.p_fy = std::stod(splitted_line[ParticleTXTColumns::fy]);
+    columns.p_fz = std::stod(splitted_line[ParticleTXTColumns::fz]);
+    columns.p_omegax = std::stod(splitted_line[ParticleTXTColumns::omegax]);
+    columns.p_omegay = std::stod(splitted_line[ParticleTXTColumns::omegay]);
+    columns.p_omegaz = std::stod(splitted_line[ParticleTXTColumns::omegaz]);
+    columns.p_coord = std::stoi(splitted_line[ParticleTXTColumns::coord]);
+    columns.p_disp_x = std::stod(splitted_line[ParticleTXTColumns::displace_x]);
+    columns.p_disp_y = std::stod(splitted_line[ParticleTXTColumns::displace_y]);
+    columns.p_disp_z = std::stod(splitted_line[ParticleTXTColumns::displace_z]);
+    columns.p_disp_mag = std::stod(splitted_line[ParticleTXTColumns::disp_mag]);
+    columns.p_ke_rot = std::stod(splitted_line[ParticleTXTColumns::ke_rot]);
+    columns.p_ke_tra = std::stod(splitted_line[ParticleTXTColumns::ke_tra]);
+    columns.ts = timestep;
+    coordinate coord{.x = columns.p_x, .y = columns.p_y, .z = columns.p_z};
+    columns.cellstr = decomp.calc_cell(coord);
+    auto cell = decomp.calc_cell_numeric(coord);
+    columns.cell_x = cell.x;
+    columns.cell_y = cell.y;
+    columns.cell_z = cell.z;
+    part_file_column.push_back(columns);
+  }
+}
+
+void dumpfile::parse_file()
+{
+  switch (type) {
+  case dumpfile_t::contact:
+    parse_contacts();
+    break;
+  case dumpfile_t::particle:
+    parse_particles();
+    break;
   }
 }
 
