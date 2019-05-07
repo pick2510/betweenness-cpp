@@ -5,16 +5,17 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "INIReader.h"
+#include "betweenness.h"
 #include "data.h"
 #include "graph.h"
-#include "betweenness.h"
 #include "natural_sort.hpp"
 #include "utils.h"
-#include "INIReader.h"
 #include <Eigen/Eigen>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/console.hpp>
@@ -27,8 +28,6 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
 #include <unistd.h>
-
-
 
 int main(int argc, char **argv)
 {
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
   std::vector<std::string> radius_file_list{};
   std::deque<std::string> chain_file_list{};
   std::vector<long> ts{};
-  double *ts_particle;
+  std::unique_ptr<double[]> ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
   int t_len{};
@@ -94,7 +93,7 @@ int main(int argc, char **argv)
 
     radius_file.pop_back();
     std::sort(radius_file.begin(), radius_file.end(), cmp_radii);
-    
+
     auto lookup_table = get_lookup_table(radius_file);
     vertice_map = get_vertice_map(radius_file);
     inv_vertice_map = inverse_map(vertice_map);
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
       return 0;
     }
-    ts_particle = new double[t_len * p_size]{};
+    ts_particle = std::make_unique<double[]>(t_len * p_size);
     BOOST_LOG_TRIVIAL(info)
         << "Size of ts_particle: " << p_size * t_len * sizeof(double);
     long v_index = 0;
@@ -194,14 +193,13 @@ int main(int argc, char **argv)
     while (!stop) {
       auto status = world.probe(0, TAG_FILE);
       auto nbytes = status.count<char>();
-      char *f_recv = new char[nbytes.get() + 1]{};
+      auto f_recv = std::make_unique<char[]>(nbytes.get() + 1);
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
-      world.recv(0, TAG_FILE, f_recv, nbytes.get());
+      world.recv(0, TAG_FILE, f_recv.get(), nbytes.get());
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
                               << ") Recevied: " << nbytes.get() << " bytes";
-      std::string file(f_recv);
-      delete[] f_recv;
+      std::string file(f_recv.get());
       BOOST_LOG_TRIVIAL(info) << file;
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
@@ -239,9 +237,8 @@ int main(int argc, char **argv)
     output_centrality_ts(ts_mean_file, runningConf, results, inv_vertice_map);
     ts_mean_file.close();
     BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
-    Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle, t_len,
+    Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle.get(), t_len,
                                                 vertice_map.size());
     output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts);
-    delete[] ts_particle;
   }
 }

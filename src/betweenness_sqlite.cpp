@@ -14,6 +14,7 @@
 #include "data.h"
 #include "graph_sqlite.h"
 #include "grid.h"
+#include "memory"
 #include "natural_sort.hpp"
 #include "utils.h"
 #include <Eigen/Eigen>
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
   std::deque<long> ts{};
   std::vector<long> ts_res{};
   std::string path{};
-  double *ts_particle;
+  std::unique_ptr<double[]> ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
   int t_len{};
@@ -120,7 +121,7 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
       return 0;
     }
-    ts_particle = new double[t_len * p_size]{};
+    ts_particle = std::make_unique<double[]>(t_len * p_size);
     BOOST_LOG_TRIVIAL(info)
         << "Size of ts_particle: " << p_size * t_len * sizeof(double);
     long v_index = 0;
@@ -247,9 +248,8 @@ int main(int argc, char **argv)
     output_centrality_ts(ts_mean_file, runningConf, results, inv_vertice_map);
     ts_mean_file.close();
     BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
-    Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle, t_len,
+    Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle.get(), t_len,
                                                 vertice_map.size());
     output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts_res);
-    delete[] ts_particle;
   }
 }
