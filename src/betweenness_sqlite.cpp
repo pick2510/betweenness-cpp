@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     runningConf = getBetweennessConfigObj(reader, "betweenness_sqlite");
     // define pattern fro globbing chain files, trim strings, and glob
 
-    path = std::string{runningConf.OutputPath + "/" + runningConf.db_filename};
+    path = std::string{runningConf.InputPath + "/" + runningConf.db_filename};
     auto stor = inittsstorage(path);
     auto particles = indexStorage(path);
     particles.sync_schema();
