@@ -195,29 +195,43 @@ int main(int argc, char **argv)
   particlestorage->pragma.journal_mode(journal_mode::WAL);
   particlestorage->pragma.synchronous(0);
   particlestorage->sync_schema();
-  std::atomic<long> index{0};
+  std::atomic<long> index_c{0}, index_p{0};
   double percent{0.0};
   std::vector<std::vector<ContactColumns>> chunk_res;
   std::vector<long> ts_vec;
-
-  /*
-  CONTACT PROCESSING
-
-  */
-
-  processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
-                  index, chunk_res);
-
-  /*
-  PARTICLE PARSING
-
-  */
-  index = 0;
   auto part_size = radius_file_list.size();
   std::vector<std::vector<ParticleColumns>> chunk_res_part{};
+#if defined(_OPENMP)
+#pragma omp parallel sections
+  {
+#endif
 
-  processParticles(radius_file_list, radius_map, decomp, part_size, index,
-                   chunk_res_part);
+/*
+CONTACT PROCESSING
+
+*/
+#if defined(_OPENMP)
+
+#pragma omp section
+#endif
+    processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
+                    index_c, chunk_res);
+
+    /*
+    PARTICLE PARSING
+
+    */
+
+#if defined(_OPENMP)
+
+#pragma omp section
+#endif
+    processParticles(radius_file_list, radius_map, decomp, part_size, index_p,
+                     chunk_res_part);
+
+#if defined(_OPENMP)
+  }
+#endif
 
   BOOST_LOG_TRIVIAL(info) << "Finished insert, start with contact index";
   auto idx = indexContactStorage(runningConf.OutputPath + "/" +
