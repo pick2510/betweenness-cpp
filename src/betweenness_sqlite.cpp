@@ -130,12 +130,18 @@ int main(int argc, char **argv)
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       long timestep{ts.front()};
+      auto db = indexStorage(path);
+      auto columns =
+          db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
+      auto col_size = columns.size();
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
                               << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
       BOOST_LOG_TRIVIAL(info)
           << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-      world.send(dst_rank, TAG_FILE, timestep);
+      world.send(dst_rank, TAG_TS, timestep);
+      world.send(dst_rank, TAG_SIZE, col_size);
+      world.send(dst_rank, TAG_FILE, columns);
       ts.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank - 1] =
@@ -157,12 +163,18 @@ int main(int argc, char **argv)
 
           // Send the new job.
           long timestep{ts.front()};
+          auto db = indexStorage(path);
+          auto columns = db.get_all<ContactColumns>(
+              where(c(&ContactColumns::ts) == timestep));
+          auto col_size = columns.size();
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
                                   << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
-          world.send(dst_rank, TAG_FILE, timestep);
+          world.send(dst_rank, TAG_TS, timestep);
+          world.send(dst_rank, TAG_SIZE, col_size);
+          world.send(dst_rank, TAG_FILE, columns);
           ts.pop_front();
           reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
@@ -191,17 +203,22 @@ int main(int argc, char **argv)
     bool stop = false;
     while (!stop) {
       long ts;
+      std::vector<ContactColumns> cols{};
+      size_t col_size;
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
-      world.recv(0, TAG_FILE, ts);
+      world.recv(0, TAG_TS, ts);
       BOOST_LOG_TRIVIAL(info) << ts;
+      world.recv(0, TAG_SIZE, col_size);
+      cols.resize(col_size);
+      world.recv(0, TAG_FILE, cols);
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
                               << ") Received job " << ts << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Start Job\n";
-      GraphSQLite mygraph(v_map, path, ts);
+      GraphSQLite mygraph(v_map, path, ts, cols);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Send result

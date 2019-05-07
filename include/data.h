@@ -12,6 +12,8 @@
 constexpr int MASTER = 0;
 constexpr int TAG_RESULT = 1;
 constexpr int TAG_BREAK = 2;
+constexpr int TAG_TS = 5;
+constexpr int TAG_SIZE = 3;
 constexpr int TAG_FILE = 10;
 constexpr int HOSTNAME_LEN = 255;
 constexpr int TAG_PART_TS = 20;
@@ -94,6 +96,51 @@ constexpr char ts_particle_path[] = "particles";
 constexpr char ts_centrality_path[] = "centrality";
 
 struct ContactColumns {
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar, const unsigned int version)
+  {
+    ar &id;
+    ar &p1_x;
+    ar &p1_y;
+    ar &p1_z;
+    ar &p2_x;
+    ar &p2_y;
+    ar &p2_z;
+    ar &p1_vx;
+    ar &p1_vy;
+    ar &p1_vz;
+    ar &p2_vx;
+    ar &p2_vy;
+    ar &p2_vz;
+    ar &p1_id;
+    ar &p2_id;
+    ar &is_periodic;
+    ar &c_force_x;
+    ar &c_force_y;
+    ar &c_force_z;
+    ar &cn_force_x;
+    ar &cn_force_y;
+    ar &cn_force_z;
+    ar &ct_force_x;
+    ar &ct_force_y;
+    ar &ct_force_z;
+    ar &c_torque_x;
+    ar &c_torque_y;
+    ar &c_torque_z;
+    ar &disp_x;
+    ar &disp_y;
+    ar &disp_z;
+    ar &contact_area;
+    ar &contact_overlap;
+    ar &sliding_contact;
+    ar &cell_x;
+    ar &cell_y;
+    ar &cell_z;
+    ar &ts;
+    ar &cellstr;
+  }
+
   long id;
   double p1_x;
   double p1_y;

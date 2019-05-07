@@ -1,8 +1,10 @@
 #include "graph_sqlite.h"
 
 GraphSQLite::GraphSQLite(const std::map<std::string, int> &vertices_map,
-                         const std::string &stor, long timestep)
-    : v_map{vertices_map}, path{stor}, timestep{timestep}, graph{v_map.size()}
+                         const std::string &stor, long timestep,
+                         std::vector<ContactColumns> &cols)
+    : v_map{vertices_map}, path{stor}, timestep{timestep}, graph{v_map.size()},
+      cols{cols}
 {
   BOOST_LOG_TRIVIAL(info) << timestep;
   BOOST_LOG_TRIVIAL(info) << "Initialized";
@@ -27,11 +29,10 @@ void GraphSQLite::calculate_accumulator()
 
 void GraphSQLite::generate_graph()
 {
-  auto db = indexStorage(path);
-  db.open_forever();
-  auto columns =
-      db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
-  for (const auto &elem : columns) {
+  // auto db = indexStorage(path);
+  // auto columns =
+  //   db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
+  for (const auto &elem : cols) {
     boost::add_edge(v_map.at(std::to_string(elem.p1_id)),
                     v_map.at(std::to_string(elem.p2_id)), graph);
   }

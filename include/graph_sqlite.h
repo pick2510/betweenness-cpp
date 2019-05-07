@@ -40,6 +40,7 @@ private:
   const std::map<std::string, int> &v_map;
   const std::string path;
   long timestep;
+  std::vector<ContactColumns> cols;
   // Storage db;
   // std::map<int, double> betweenness_centrality;
   std::vector<int> keys;
@@ -53,7 +54,8 @@ private:
 
 public:
   GraphSQLite(const std::map<std::string, int> &vertices_map,
-              const std::string &stor, long ts);
+              const std::string &stor, long ts,
+              std::vector<ContactColumns> &cols);
   Result get_result();
   void calc();
   std::map<int, double> get_centrality_map();
