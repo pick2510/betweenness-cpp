@@ -201,11 +201,13 @@ int main(int argc, char **argv)
   std::vector<long> ts_vec;
   auto part_size = radius_file_list.size();
   std::vector<std::vector<ParticleColumns>> chunk_res_part{};
+  int con_dep{0};
+  int part_dep{0};
 #if defined(_OPENMP)
   omp_set_max_active_levels(3);
   omp_set_nested(1);
-#pragma omp parallel sections
-
+#pragma omp parallel
+#pragma omp single
   {
 #endif
 
@@ -214,28 +216,31 @@ CONTACT PROCESSING
 
 */
 #if defined(_OPENMP)
-#pragma omp section
+
+#pragma omp task shared(con_dep) depend(out : con_dep)
+    {
 #endif
-    processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
-                    index_c, chunk_res);
+      processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
+                      index_c, chunk_res);
+      con_dep = 1;
+#if defined(_OPENMP)
+    }
 
     /*
     PARTICLE PARSING
 
     */
 
-#if defined(_OPENMP)
-
-#pragma omp section
+#pragma omp task shared(part_dep) depend(out : part_dep)
+    {
 #endif
-    processParticles(radius_file_list, radius_map, decomp, part_size, index_p,
-                     chunk_res_part);
+      processParticles(radius_file_list, radius_map, decomp, part_size, index_p,
+                       chunk_res_part);
+      part_dep = 1;
 
 #if defined(_OPENMP)
-  }
-#pragma omp parallel sections
-  {
-#pragma omp section
+    }
+#pragma omp task shared(con_dep) depend(in : con_dep)
     {
 #endif
       BOOST_LOG_TRIVIAL(info) << "Finished insert, start with contact index";
@@ -273,7 +278,7 @@ CONTACT PROCESSING
 
 #if defined(_OPENMP)
     }
-#pragma omp section
+#pragma omp task shared(part_dep) depend(in : part_dep)
     {
 #endif
       BOOST_LOG_TRIVIAL(info) << "Starting Particle indexing";
