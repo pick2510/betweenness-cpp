@@ -233,67 +233,81 @@ CONTACT PROCESSING
 
 #if defined(_OPENMP)
   }
+#pragma omp parallel sections
+  {
+#pragma omp section
+    {
 #endif
+      BOOST_LOG_TRIVIAL(info) << "Finished insert, start with contact index";
+      auto idx = indexContactStorage(runningConf.OutputPath + "/" +
+                                     runningConf.contact_filename);
+      idx.pragma.journal_mode(journal_mode::WAL);
+      idx.pragma.synchronous(0);
+      idx.sync_schema();
+      BOOST_LOG_TRIVIAL(info) << "Finished Contact indexing";
+      std::sort(ts_vec.begin(), ts_vec.end());
+      BOOST_LOG_TRIVIAL(info) << "Starting insert TS Table";
+      auto ts_table = initTSStorage(runningConf.OutputPath + "/" +
+                                    runningConf.contact_filename);
+      ts_table.sync_schema();
+      ts_table.transaction([&] {
+        for (const auto &ts : ts_vec) {
+          ts_table.insert(ts_column{.ts = ts});
+        }
+        return true;
+      });
 
-  BOOST_LOG_TRIVIAL(info) << "Finished insert, start with contact index";
-  auto idx = indexContactStorage(runningConf.OutputPath + "/" +
-                                 runningConf.contact_filename);
-  idx.pragma.journal_mode(journal_mode::WAL);
-  idx.pragma.synchronous(0);
-  idx.sync_schema();
-  BOOST_LOG_TRIVIAL(info) << "Finished Contact indexing";
-  std::sort(ts_vec.begin(), ts_vec.end());
-  BOOST_LOG_TRIVIAL(info) << "Starting insert TS Table";
-  auto ts_table = initTSStorage(runningConf.OutputPath + "/" +
-                                runningConf.contact_filename);
-  ts_table.sync_schema();
-  ts_table.transaction([&] {
-    for (const auto &ts : ts_vec) {
-      ts_table.insert(ts_column{.ts = ts});
+      BOOST_LOG_TRIVIAL(info) << "Finished Contact TS Table";
+      BOOST_LOG_TRIVIAL(info) << "Starting Contact insert Radius Table";
+      auto rad_table = initRadstorage(runningConf.OutputPath + "/" +
+                                      runningConf.contact_filename);
+      rad_table.sync_schema();
+      rad_table.transaction([&] {
+        for (const auto &r : radius_map) {
+          rad_table.insert(radius{.id = r.first, .rad = r.second});
+        }
+        return true;
+      });
+
+      BOOST_LOG_TRIVIAL(info) << "Finished insert TS Table";
+
+#if defined(_OPENMP)
     }
-    return true;
-  });
+#pragma omp section
+    {
+#endif
+      BOOST_LOG_TRIVIAL(info) << "Starting Particle indexing";
 
-  BOOST_LOG_TRIVIAL(info) << "Finished Contact TS Table";
-  BOOST_LOG_TRIVIAL(info) << "Starting Contact insert Radius Table";
-  auto rad_table = initRadstorage(runningConf.OutputPath + "/" +
-                                  runningConf.contact_filename);
-  rad_table.sync_schema();
-  rad_table.transaction([&] {
-    for (const auto &r : radius_map) {
-      rad_table.insert(radius{.id = r.first, .rad = r.second});
+      auto part_idx = ParticleIndexStorage(runningConf.OutputPath + "/" +
+                                           runningConf.particle_filename);
+      part_idx.pragma.journal_mode(journal_mode::WAL);
+      part_idx.pragma.synchronous(0);
+      part_idx.sync_schema();
+      BOOST_LOG_TRIVIAL(info) << "Finished Particle indexing";
+
+      BOOST_LOG_TRIVIAL(info) << "Starting insert Particle TS Table";
+      auto part_ts_table = initTSStorage(runningConf.OutputPath + "/" +
+                                         runningConf.particle_filename);
+      part_ts_table.sync_schema();
+      part_ts_table.transaction([&] {
+        for (const auto &ts : ts_vec) {
+          part_ts_table.insert(ts_column{.ts = ts});
+        }
+        return true;
+      });
+
+      auto part_rad_table = initRadstorage(runningConf.OutputPath + "/" +
+                                           runningConf.particle_filename);
+      part_rad_table.sync_schema();
+      part_rad_table.transaction([&] {
+        for (const auto &r : radius_map) {
+          part_rad_table.insert(radius{.id = r.first, .rad = r.second});
+        }
+        return true;
+      });
+#if defined(_OPENMP)
     }
-    return true;
-  });
-  BOOST_LOG_TRIVIAL(info) << "Finished insert TS Table";
-  BOOST_LOG_TRIVIAL(info) << "Starting Particle indexing";
-
-  auto part_idx = ParticleIndexStorage(runningConf.OutputPath + "/" +
-                                       runningConf.particle_filename);
-  part_idx.pragma.journal_mode(journal_mode::WAL);
-  part_idx.pragma.synchronous(0);
-  part_idx.sync_schema();
-  BOOST_LOG_TRIVIAL(info) << "Finished Particle indexing";
-
-  BOOST_LOG_TRIVIAL(info) << "Starting insert Particle TS Table";
-  auto part_ts_table = initTSStorage(runningConf.OutputPath + "/" +
-                                     runningConf.particle_filename);
-  part_ts_table.sync_schema();
-  part_ts_table.transaction([&] {
-    for (const auto &ts : ts_vec) {
-      part_ts_table.insert(ts_column{.ts = ts});
-    }
-    return true;
-  });
-
-  auto part_rad_table = initRadstorage(runningConf.OutputPath + "/" +
-                                       runningConf.particle_filename);
-  part_rad_table.sync_schema();
-  part_rad_table.transaction([&] {
-    for (const auto &r : radius_map) {
-      part_rad_table.insert(radius{.id = r.first, .rad = r.second});
-    }
-    return true;
-  });
+  }
+#endif
   return EXIT_SUCCESS;
 }
