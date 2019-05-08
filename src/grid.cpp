@@ -202,7 +202,10 @@ int main(int argc, char **argv)
   auto part_size = radius_file_list.size();
   std::vector<std::vector<ParticleColumns>> chunk_res_part{};
 #if defined(_OPENMP)
+  omp_set_max_active_levels(3);
+  omp_set_nested(1);
 #pragma omp parallel sections
+
   {
 #endif
 
@@ -211,7 +214,6 @@ CONTACT PROCESSING
 
 */
 #if defined(_OPENMP)
-    omp_set_nested(1);
 #pragma omp section
 #endif
     processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
