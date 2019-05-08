@@ -211,7 +211,7 @@ CONTACT PROCESSING
 
 */
 #if defined(_OPENMP)
-
+    omp_set_nested(1);
 #pragma omp section
 #endif
     processContacts(chain_file_list, radius_map, decomp, ts_vec, chain_size,
