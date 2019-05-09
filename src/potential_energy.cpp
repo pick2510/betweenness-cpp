@@ -3,3 +3,6 @@
 //
 
 #include "potential_energy.h"
+potential_energy::~potential_energy() {}
+
+potential_energy::potential_energy() {}

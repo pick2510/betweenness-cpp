@@ -45,6 +45,7 @@ private:
     ar &randomly_selected;
     ar &contact_filename;
     ar &particle_filename;
+    ar &v_particles;
   }
 
 public:
@@ -61,7 +62,7 @@ public:
   int randomly_selected = 20;
   std::string contact_filename;
   std::string particle_filename;
-  std::string
+  std::string v_particles;
 };
 
 struct Result {

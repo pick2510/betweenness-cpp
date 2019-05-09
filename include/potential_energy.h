@@ -8,9 +8,9 @@
 
 
 class potential_energy {
-
+public:
+  potential_energy();
+  virtual ~potential_energy();
 };
 
-
-
-#endif //DEM_UTILS_POTENTIAL_ENERGY_H
+#endif // DEM_UTILS_POTENTIAL_ENERGY_H
