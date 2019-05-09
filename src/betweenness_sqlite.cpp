@@ -120,6 +120,15 @@ int main(int argc, char **argv)
       BOOST_LOG_TRIVIAL(error) << "Too many processes (" << world_size
                                << ") for the number of jobs!\n";
       BOOST_LOG_TRIVIAL(error) << "Use " << t_len + 1 << " ranks or less\n";
+      world.abort(EXIT_FAILURE);
+      return 0;
+    }
+    if (world_size < 2) {
+      BOOST_LOG_TRIVIAL(error) << "Too few processes (" << world_size
+                               << ") for the number of jobs!\n";
+      BOOST_LOG_TRIVIAL(error) << "Use at least 2 ranks\n";
+
+      world.abort(EXIT_FAILURE);
       return 0;
     }
     ts_particle = std::make_unique<double[]>(t_len * p_size);
