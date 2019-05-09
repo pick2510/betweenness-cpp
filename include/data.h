@@ -61,6 +61,7 @@ public:
   int randomly_selected = 20;
   std::string contact_filename;
   std::string particle_filename;
+  std::string
 };
 
 struct Result {

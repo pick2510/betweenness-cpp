@@ -31,7 +31,7 @@ ADD_LIBRARY(sqlite3 STATIC
 
 # Core library. *.cpp should be added here.
 
-add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp ./src/graph_sqlite.cpp ./src/dumpfile.cpp ./src/decomposition.cpp)
+add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp ./src/graph_sqlite.cpp ./src/dumpfile.cpp ./src/decomposition.cpp src/potential_energy.cpp include/potential_energy.h)
 
 
 
@@ -62,6 +62,9 @@ set(CMAKE_C_FLAGS_DEBUG "-Og -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mtune=native")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -mtune=native")
 
+
+#set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined,leak")
+#set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=undefined,leak")
 
 #SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pg -no-pie")
 #SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg -no-pie")

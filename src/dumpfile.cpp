@@ -68,7 +68,7 @@ void dumpfile::parse_contacts()
     columns.contact_overlap =
         std::stod(splitted_line[ContactTXTColumns::contact_overlap]);
     columns.sliding_contact =
-        std::stod(splitted_line[ContactTXTColumns::sliding_contact]);
+        std::stoi(splitted_line[ContactTXTColumns::sliding_contact]);
     columns.ts = timestep;
     auto coord = dumpfile::calc_contactpoint(columns, radius);
     columns.cellstr = decomp.calc_cell(coord);
