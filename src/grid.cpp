@@ -152,14 +152,14 @@ int main(int argc, char **argv)
   try {
     configPath = getConfigPath(argc, argv);
   }
-  catch (std::invalid_argument e) {
+  catch (std::invalid_argument &e) {
     BOOST_LOG_TRIVIAL(error) << e.what();
     exit(EXIT_FAILURE);
   }
   try {
     reader = parseConfigFile(configPath);
   }
-  catch (std::invalid_argument e) {
+  catch (std::invalid_argument &e) {
     BOOST_LOG_TRIVIAL(error) << e.what();
     exit(EXIT_FAILURE);
   }
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
   chainpattern = trim(chainpattern);
   auto chain_file_list = glob_deq(chainpattern);
   auto radius_file_list = glob(xyzpattern);
-  if (radius_file_list.size() < 1 || chain_file_list.size() < 1) {
+  if (radius_file_list.empty() || chain_file_list.empty()) {
     BOOST_LOG_TRIVIAL(error)
         << "Need at least one file in postchain and postxyz Dir.";
     exit(EXIT_FAILURE);
