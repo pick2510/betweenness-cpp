@@ -38,5 +38,10 @@ cell Decomposition::calc_cell_numeric(coordinate &coord) const
               .y = static_cast<int>(std::floor(coord.y / dy)),
               .z = static_cast<int>(std::floor(coord.z / dz))};
 }
+const std::vector<std::string> &Decomposition::getCells() const
+{
+  return cells;
+}
 
 Decomposition::~Decomposition() {}
+

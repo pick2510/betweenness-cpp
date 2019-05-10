@@ -185,6 +185,16 @@ int main(int argc, char **argv)
   get_lookup_table(radius_file, lookup_table, radius_map);
   SI::natural::sort(chain_file_list);
   auto chain_size = chain_file_list.size();
+  auto decomp_stor = initDecompstorage(runningConf.OutputPath + "/" +
+                                       runningConf.contact_filename);
+  decomp_stor.sync_schema();
+  auto decomp_strings = decomp.getCells();
+  decomp_stor.transaction([&] {
+    for (const auto &elem : decomp_strings) {
+      decomp_stor.insert(decomp_table{.cellstr = elem});
+    }
+    return true;
+  });
   contactstorage = std::make_unique<c_storage_t>(initContactStorage(
       runningConf.OutputPath + "/" + runningConf.contact_filename));
   particlestorage = std::make_unique<p_storage_t>(ParticleStorage(

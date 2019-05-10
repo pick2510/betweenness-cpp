@@ -251,6 +251,16 @@ struct ParticleColumns {
   std::string cellstr;
 };
 
+struct decomp_table{
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar, const unsigned int version)
+  {
+    ar &cellstr;
+  }
+  std::string cellstr;
+};
+
 enum ContactTXTColumns {
   p1_x,
   p1_y,

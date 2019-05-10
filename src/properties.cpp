@@ -4,6 +4,7 @@
 
 #include "properties.h"
 #include "INIReader.h"
+#include "PotentialEnergy.h"
 #include "data.h"
 #include "grid.h"
 #include "sqlite_orm.h"
@@ -20,6 +21,7 @@
 #include <deque>
 #include <map>
 #include <serialize_tuple.h>
+#include <tuple>
 
 using namespace sqlite_orm;
 
@@ -36,6 +38,7 @@ int main(int argc, char *argv[])
   int t_len{};
   std::deque<long> ts{};
   std::string path;
+  decom_vec_storage_t decomp_str;
   std::vector<int> keys{};
   std::vector<double> vals{};
   std::vector<t_ts_pot_res> results{};
@@ -80,16 +83,21 @@ int main(int argc, char *argv[])
     }
     std::sort(ts.begin(), ts.end());
     auto lookup_table = get_lookup_table(radius_map);
-
+    auto cell_db = initDecompstorage(path);
+    decomp_str = cell_db.get_all<decomp_table>();
     keys = getKeys(radius_map);
     vals = getVals(radius_map);
   }
 
   broadcast(world, keys, MASTER);
+  broadcast(world, decomp_str, MASTER);
   broadcast(world, vals, MASTER);
   broadcast(world, path, MASTER);
+  auto db = indexContactStorage(path);
 
   if (rank == MASTER) {
+    auto db = indexContactStorage(path);
+
     // sanity check of file list
     t_len = ts.size();
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
@@ -116,13 +124,13 @@ int main(int argc, char *argv[])
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       long timestep{ts.front()};
-      auto db = indexContactStorage(path);
-      db.sync_schema();
       auto cols = db.select(
-          columns(&ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
+          columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                  &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
                   &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
                   &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-                  &ContactColumns::ct_force_z, &ContactColumns::cellstr),
+                  &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                  &ContactColumns::ts),
           where(c(&ContactColumns::ts) == timestep));
       auto col_size = cols.size();
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
@@ -137,6 +145,66 @@ int main(int argc, char *argv[])
       reqs_world[dst_rank - 1] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
+    bool stop = false;
+    while (ts.size() > 0) {
+      for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
+        if (reqs_world[dst_rank - 1].test()) {
+          BOOST_LOG_TRIVIAL(info)
+              << "[MASTER] Rank " << dst_rank << " is done.\n";
+          // Check if there is remaining jobs
+
+          // Tell the slave that a new job is coming.
+          world.send(dst_rank, TAG_BREAK, stop);
+
+          // Send the new job.
+          long timestep{ts.front()};
+          auto cols = db.select(
+              columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                      &ContactColumns::contact_overlap,
+                      &ContactColumns::cn_force_x, &ContactColumns::cn_force_y,
+                      &ContactColumns::cn_force_z, &ContactColumns::ct_force_x,
+                      &ContactColumns::ct_force_y, &ContactColumns::ct_force_z,
+                      &ContactColumns::cellstr, &ContactColumns::ts),
+              where(c(&ContactColumns::ts) == timestep));
+          auto col_size = cols.size();
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
+                                  << ") to SLAVE " << dst_rank;
+          BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+          BOOST_LOG_TRIVIAL(info)
+              << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
+          world.send(dst_rank, TAG_SIZE, col_size);
+          world.send(dst_rank, TAG_FILE, cols);
+          ts.pop_front();
+          reqs_world[dst_rank - 1] =
+              world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+        }
+      }
+    }
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
+    wait_all(reqs_world.begin(), reqs_world.end());
+    stop = true;
+    for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
+      world.send(dst_rank, TAG_BREAK, stop);
+    }
+    BOOST_LOG_TRIVIAL(info)
+        << "[MASTER] Handled all jobs, killed every process.\n";
   }
+  if (rank > MASTER) {
+    std::map<int, double> radius = constructMap(keys, vals);
+    bool stop = false;
+    while (!stop) {
+      tuple_storage_t data_recv{};
+      size_t col_size;
+      BOOST_LOG_TRIVIAL(info)
+          << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
+      world.recv(0, TAG_SIZE, col_size);
+      data_recv.resize(col_size);
+      world.recv(0, TAG_FILE, data_recv);
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank
+                              << "] recevied ts: " << std::get<8>(data_recv[0]);
+      PotentialEnergy pe(radius, data_recv, decomp_str);
+    }
+  }
+
   return EXIT_SUCCESS;
 }

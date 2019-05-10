@@ -13,6 +13,7 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 void LogConfig(Config &conf);
@@ -88,6 +89,14 @@ inline auto initRadstorage(const std::string &path)
   return make_storage(path, make_table("Radius",
                                        make_column("particleid", &radius::id),
                                        make_column("radius", &radius::rad)));
+}
+
+inline auto initDecompstorage(const std::string &path)
+{
+  using namespace sqlite_orm;
+  return make_storage(
+      path, make_table("Decomposition",
+                       make_column("cellstr", &decomp_table::cellstr)));
 }
 
 inline auto indexContactStorage(const std::string &path)
@@ -211,5 +220,18 @@ inline auto ParticleIndexStorage(const std::string &path)
 
 using c_storage_t = decltype(initContactStorage(""));
 using p_storage_t = decltype(ParticleStorage(""));
+using c_storage_index_t = decltype(indexContactStorage(""));
+using tuple_storage_t =
+    decltype(std::declval<c_storage_index_t>().select(sqlite_orm::columns(
+        &ContactColumns::p1_id, &ContactColumns::p2_id,
+        &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
+        &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
+        &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
+        &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+        &ContactColumns::ts)));
+
+using decom_storage_t = decltype(initDecompstorage(""));
+using decom_vec_storage_t =
+    decltype(std::declval<decom_storage_t>().get_all<decomp_table>());
 
 #endif

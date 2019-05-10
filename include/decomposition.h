@@ -18,6 +18,7 @@ public:
   std::string calc_cell(coordinate &coord) const;
   cell calc_cell_numeric(coordinate &coord) const;
   ~Decomposition();
+  const std::vector<std::string> &getCells() const;
 };
 
 #endif
