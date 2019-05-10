@@ -63,6 +63,7 @@ void LogConfig(Config &conf);
 
 inline void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);
+Config getPropertiesConfigObj(INIReader &reader);
 
 char *trimwhitespace(char *str);
 

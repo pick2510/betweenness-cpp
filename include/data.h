@@ -312,10 +312,7 @@ enum ParticleTXTColumns {
   ke_tra
 };
 
-enum dumpfile_t {
-  particle,
-  contact
-};
+enum dumpfile_t { particle, contact };
 
 constexpr double Ystar = (6.5e11) / (2 * (1 - (.25 * .25)));
 constexpr double Gstar = (6.5e11) / (4 * (2 - .25) * (1 + .25));
@@ -328,5 +325,11 @@ struct radius {
   int id;
   double rad;
 };
+
+enum res_vec { ftan, fnor, penor, petan };
+
+using t_ts_pot_res = std::map<std::string, std::vector<double>>;
+
+using t_pot_res = std::map<long, t_ts_pot_res>;
 
 #endif

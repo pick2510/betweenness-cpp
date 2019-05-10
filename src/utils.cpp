@@ -414,6 +414,15 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
   return conf;
 }
 
+Config getPropertiesConfigObj(INIReader &reader){
+    Config conf;
+    conf.InputPath = reader.Get("properties", "inputPath", "");
+    conf.OutputPath = reader.Get("properties", "outputPath", "");
+    conf.contact_filename = reader.Get("properties", "ContactfileName", "");
+    conf.particle_filename = reader.Get("properties", "ParticlefileName", "");
+    return conf;
+}
+
 std::vector<std::string> getCartesianProduct(std::vector<int> &x,
                                              std::vector<int> &y,
                                              std::vector<int> &z)
