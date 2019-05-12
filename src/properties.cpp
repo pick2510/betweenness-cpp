@@ -171,7 +171,8 @@ int main(int argc, char *argv[])
                                   << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
           BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
+              << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+              << "% done";
           world.send(dst_rank, TAG_SIZE, col_size);
           world.send(dst_rank, TAG_FILE, cols);
           ts.pop_front();

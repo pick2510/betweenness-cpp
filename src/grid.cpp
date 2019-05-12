@@ -66,7 +66,7 @@ void processParticles(std::vector<std::string> &radius_file_list,
 #if defined(_OPENMP)
     omp_unset_lock(&particle_mutex);
 #endif
-    double percent = (index / part_size) * 100.0;
+    double percent = (static_cast<double>(index) / part_size) * 100.0;
     BOOST_LOG_TRIVIAL(info)
         << percent << "% (" << index << " of " << part_size << ") done";
   }
@@ -119,7 +119,7 @@ void processContacts(std::deque<std::string> &chain_file_list,
 #if defined(_OPENMP)
     omp_unset_lock(&mutex);
 #endif
-    double percent = (index / chain_size) * 100.0;
+    double percent = (static_cast<double>(index) / chain_size) * 100.0;
     BOOST_LOG_TRIVIAL(info)
         << percent << "% (" << index << " of " << chain_size << ") done";
   }
