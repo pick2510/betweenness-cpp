@@ -3,6 +3,7 @@
 //
 
 #include "PotentialEnergy.h"
+#include "accumulator.h"
 #include <Eigen/Dense>
 #include <boost/log/trivial.hpp>
 #include <cmath>
@@ -85,6 +86,30 @@ inline void PotentialEnergy::calc_pot_energy(int &counter)
   }
 }
 
-void PotentialEnergy::aggregate_per_cell() {}
+void PotentialEnergy::aggregate_per_cell()
+{
+  for (auto &elem : decomp_str) {
+    auto range = cellstridx.equal_range(elem.cellstr);
+    if (range.first == range.second)
+      continue;
+    Accumulator<double> acc_penor, acc_petan, acc_ftan, acc_fnor;
+    for (auto it = range.first; it != range.second; ++it) {
+      acc_penor(m_data((*it).second, m_cols::m_penor));
+      acc_petan(m_data((*it).second, m_cols::m_petan));
+      acc_ftan(m_data((*it).second, m_cols::m_ftan));
+      acc_fnor(m_data((*it).second, m_cols::m_fnor));
+    }
+    std::map<std::string, double> agg_elem{};
+    agg_elem["penor"] = acc_penor.getAccVal();
+    agg_elem["petan"] = acc_petan.getAccVal();
+    agg_elem["ftan"] = acc_ftan.getAccVal();
+    agg_elem["fnor"] = acc_fnor.getAccVal();
+    aggregate_map[elem.cellstr] = agg_elem;
+  }
+}
+const aggregate_map_t &PotentialEnergy::getAggregateMap() const
+{
+  return aggregate_map;
+}
 
 PotentialEnergy::~PotentialEnergy() {}

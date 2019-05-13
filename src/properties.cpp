@@ -204,6 +204,8 @@ int main(int argc, char *argv[])
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank
                               << "] recevied ts: " << std::get<8>(data_recv[0]);
       PotentialEnergy pe(radius, data_recv, decomp_str);
+      auto properties_map = pe.getAggregateMap();
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
     }
   }
 

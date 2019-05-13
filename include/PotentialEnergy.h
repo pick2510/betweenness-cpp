@@ -52,7 +52,7 @@ private:
   const std::map<int, double> &radius;
   tuple_storage_t &data;
   std::multimap<std::string, int> cellstridx{};
-  std::map<std::string, double> aggregate{};
+  aggregate_map_t aggregate_map{};
   int tuple_size;
   int vec_size;
   const decom_vec_storage_t &decomp_str;
@@ -63,6 +63,7 @@ public:
                   const decom_vec_storage_t &decomp_str);
   virtual ~PotentialEnergy();
   void aggregate_per_cell();
+  const aggregate_map_t &getAggregateMap() const;
 };
 
 #endif // DEM_UTILS_POTENTIALENERGY_H

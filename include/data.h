@@ -342,4 +342,6 @@ using t_ts_pot_res = std::map<std::string, std::vector<double>>;
 
 using t_pot_res = std::map<long, t_ts_pot_res>;
 
+using aggregate_map_t = std::map<std::string, std::map<std::string, double>>;
+
 #endif
