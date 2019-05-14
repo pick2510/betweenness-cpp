@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
           world.send(dst_rank, TAG_FILE, cols);
           ts.pop_front();
           reqs_world[dst_rank - 1] =
-              world.irecv(dst_rank, TAG_RESULT, results[v_index]);
+              world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
         }
       }
     }
