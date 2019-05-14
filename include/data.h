@@ -46,6 +46,7 @@ private:
     ar &contact_filename;
     ar &particle_filename;
     ar &v_particles;
+    ar &spinup_time;
   }
 
 public:
@@ -60,6 +61,7 @@ public:
   double domainsize_z = 0.0;
   double output_percentile = 0.9;
   int randomly_selected = 20;
+  long spinup_time;
   std::string contact_filename;
   std::string particle_filename;
   std::string v_particles;

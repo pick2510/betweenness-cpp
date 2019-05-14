@@ -420,6 +420,7 @@ Config getPropertiesConfigObj(INIReader &reader){
     conf.OutputPath = reader.Get("properties", "outputPath", "");
     conf.contact_filename = reader.Get("properties", "ContactfileName", "");
     conf.particle_filename = reader.Get("properties", "ParticlefileName", "");
+    conf.spinup_time = reader.GetInteger("properties", "spinupTime", 0);
     return conf;
 }
 

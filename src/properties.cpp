@@ -84,7 +84,12 @@ int main(int argc, char *argv[])
     for (const auto &elem : ts_list) {
       ts.push_back(elem.ts);
     }
+
     std::sort(ts.begin(), ts.end());
+    auto upper =
+        std::upper_bound(ts.begin(), ts.end(), runningConf.spinup_time);
+    if (upper != ts.end())
+      ts.erase(ts.begin(), upper);
     auto lookup_table = get_lookup_table(radius_map);
     auto cell_db = initDecompstorage(path);
     decomp_str = cell_db.get_all<decomp_table>();
