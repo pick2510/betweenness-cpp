@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
     std::sort(ts.begin(), ts.end());
     auto upper =
-        std::upper_bound(ts.begin(), ts.end(), runningConf.spinup_time);
+        std::lower_bound(ts.begin(), ts.end(), runningConf.spinup_time);
     if (upper != ts.end())
       ts.erase(ts.begin(), upper);
     auto lookup_table = get_lookup_table(radius_map);
