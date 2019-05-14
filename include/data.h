@@ -336,6 +336,20 @@ struct radius {
   double rad;
 };
 
+using aggregate_map_t = std::map<std::string, std::map<std::string, double>>;
+
+struct aggr_result_t {
+  friend class boost::serialization::access;
+  template <class Archive>
+  void serialize(Archive &ar, const unsigned int version)
+  {
+    ar &agg;
+    ar &ts;
+  }
+  aggregate_map_t agg;
+  long ts;
+};
+
 enum res_vec { ftan, fnor, penor, petan };
 
 using t_ts_pot_res = std::map<std::string, std::vector<double>>;

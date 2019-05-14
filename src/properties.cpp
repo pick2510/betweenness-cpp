@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   decom_vec_storage_t decomp_str;
   std::vector<int> keys{};
   std::vector<double> vals{};
-  std::vector<t_ts_pot_res> results{};
+  std::vector<aggr_result_t> results{};
   gethostname(hostname, HOSTNAME_LEN);
   if (rank == MASTER) {
     INIReader reader;
@@ -201,13 +201,24 @@ int main(int argc, char *argv[])
       world.recv(0, TAG_SIZE, col_size);
       data_recv.resize(col_size);
       world.recv(0, TAG_FILE, data_recv);
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank
-                              << "] recevied ts: " << std::get<8>(data_recv[0]);
+      auto timestep = std::get<10>(*data_recv.begin());
+      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] recevied ts: " << timestep;
       PotentialEnergy pe(radius, data_recv, decomp_str);
-      auto properties_map = pe.getAggregateMap();
+      pe.aggregate_per_cell();
+      auto const properties_map = pe.getAggregateMap();
+      aggr_result_t aggregate{.agg = properties_map, .ts = timestep};
+      world.send(0, TAG_RESULT, aggregate);
+      world.recv(0, TAG_BREAK, stop);
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
     }
   }
-
+  if (rank == MASTER) {
+    for (auto &elem : results) {
+      BOOST_LOG_TRIVIAL(info) << elem.ts;
+      for (auto &key : elem.agg) {
+        BOOST_LOG_TRIVIAL(info) << key.first << " " << key.second["ftan"];
+      }
+    }
+  }
   return EXIT_SUCCESS;
 }
