@@ -258,7 +258,7 @@ char *trimwhitespace(char *str)
   return str;
 }
 
-inline void check_path(boost::filesystem::path &path)
+void check_path(const boost::filesystem::path &path)
 {
   if (!fs::exists(path)) {
     fs::create_directories(path);

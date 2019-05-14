@@ -251,7 +251,7 @@ struct ParticleColumns {
   std::string cellstr;
 };
 
-struct decomp_table{
+struct decomp_table {
   friend class boost::serialization::access;
   template <class Archive>
   void serialize(Archive &ar, const unsigned int version)
@@ -336,7 +336,17 @@ struct radius {
   double rad;
 };
 
+using aggregate_map_per_particle =
+    std::map<long, std::map<std::string, double>>;
 using aggregate_map_t = std::map<std::string, std::map<std::string, double>>;
+
+using cell_properties_map =
+    std::map<std::string, std::map<long, std::map<std::string, double>>>;
+
+struct agg_result_per_particle_t {
+  std::string cell;
+  aggregate_map_per_particle agg;
+};
 
 struct aggr_result_t {
   friend class boost::serialization::access;
@@ -349,13 +359,5 @@ struct aggr_result_t {
   aggregate_map_t agg;
   long ts;
 };
-
-enum res_vec { ftan, fnor, penor, petan };
-
-using t_ts_pot_res = std::map<std::string, std::vector<double>>;
-
-using t_pot_res = std::map<long, t_ts_pot_res>;
-
-using aggregate_map_t = std::map<std::string, std::map<std::string, double>>;
 
 #endif

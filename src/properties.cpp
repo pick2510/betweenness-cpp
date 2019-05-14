@@ -5,10 +5,12 @@
 #include "properties.h"
 #include "INIReader.h"
 #include "PotentialEnergy.h"
+#include "accumulator.h"
 #include "data.h"
 #include "grid.h"
 #include "sqlite_orm.h"
 #include "utils.h"
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/mpi/collectives.hpp>
 #include <boost/mpi/communicator.hpp>
@@ -19,6 +21,7 @@
 #include <boost/serialization/vector.hpp>
 #include <cstdlib>
 #include <deque>
+#include <fstream>
 #include <map>
 #include <serialize_tuple.h>
 #include <tuple>
@@ -137,7 +140,8 @@ int main(int argc, char *argv[])
                               << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
       BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
+          << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+          << "% done";
       world.send(dst_rank, TAG_SIZE, col_size);
       world.send(dst_rank, TAG_FILE, cols);
       ts.pop_front();
@@ -146,7 +150,7 @@ int main(int argc, char *argv[])
           world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
     bool stop = false;
-    while (ts.size() > 0) {
+    while (!ts.empty()) {
       for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
         if (reqs_world[dst_rank - 1].test()) {
           BOOST_LOG_TRIVIAL(info)
@@ -202,7 +206,8 @@ int main(int argc, char *argv[])
       data_recv.resize(col_size);
       world.recv(0, TAG_FILE, data_recv);
       auto timestep = std::get<10>(*data_recv.begin());
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] recevied ts: " << timestep;
+      BOOST_LOG_TRIVIAL(info)
+          << "[SLAVE: " << rank << "] recevied ts: " << timestep;
       PotentialEnergy pe(radius, data_recv, decomp_str);
       pe.aggregate_per_cell();
       auto const properties_map = pe.getAggregateMap();
@@ -213,12 +218,55 @@ int main(int argc, char *argv[])
     }
   }
   if (rank == MASTER) {
-    for (auto &elem : results) {
-      BOOST_LOG_TRIVIAL(info) << elem.ts;
-      for (auto &key : elem.agg) {
-        BOOST_LOG_TRIVIAL(info) << key.first << " " << key.second["ftan"];
-      }
+    BOOST_LOG_TRIVIAL(info) << "Writing system sum";
+    boost::filesystem::path system_path{runningConf.OutputPath + "/system"};
+    check_path(system_path);
+    std::ofstream f(system_path.string() + "/system.csv");
+    f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
+      << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
+    calc_system_sum_write_file(results, f, runningConf);
+    BOOST_LOG_TRIVIAL(info) << "Finished writing system sum";
+    BOOST_LOG_TRIVIAL(info) << "Writing individual particles";
+    BOOST_LOG_TRIVIAL(info) << "Create cellstr map";
+    boost::filesystem::path cellstr_path{runningConf.OutputPath + "/cells"};
+    check_path(cellstr_path);
+    create_cellstr_map(decomp_str, results, runningConf, cellstr_path);
+    BOOST_LOG_TRIVIAL(info) << "Finished cellstr map";
+  }
+
+  return EXIT_SUCCESS;
+}
+void create_cellstr_map(decom_vec_storage_t decomp_str,
+                        std::vector<aggr_result_t> &results,
+                        Config &runningConf,
+                        boost::filesystem::path &cellstr_path)
+{
+  for (auto &elem : decomp_str) {
+    std::ofstream f{cellstr_path.string() + "/" + elem.cellstr + ".csv"};
+    f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
+      << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
+    for (auto &ts : results) {
+      f << ts.ts << runningConf.sep;
+      f << ts.agg[elem.cellstr]["penor"] << runningConf.sep;
+      f << ts.agg[elem.cellstr]["petan"] << runningConf.sep;
+      f << ts.agg[elem.cellstr]["ftan"] << runningConf.sep;
+      f << ts.agg[elem.cellstr]["fnor"] << "\n";
     }
   }
-  return EXIT_SUCCESS;
+}
+void calc_system_sum_write_file(std::vector<aggr_result_t> &results,
+                                std::ofstream &f, Config &runningConf)
+{
+  for (auto &elem : results) {
+    Accumulator<double> penor, petan, ftan, fnor;
+    for (auto &cell : elem.agg) {
+      penor(cell.second["penor"]);
+      petan(cell.second["petan"]);
+      ftan(cell.second["ftan"]);
+      fnor(cell.second["fnor"]);
+    }
+    f << elem.ts << runningConf.sep << penor.getAccVal() << runningConf.sep
+      << petan.getAccVal() << runningConf.sep << ftan.getAccVal()
+      << runningConf.sep << fnor.getAccVal() << "\n";
+  }
 }

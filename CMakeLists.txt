@@ -49,7 +49,7 @@ add_executable(regrid
 add_executable(betweenness_sqlite
   ./src/betweenness_sqlite.cpp)
 
-add_executable(properties ./src/properties.cpp)
+add_executable(properties ./src/properties.cpp ./src/utils.cpp)
 
 target_link_libraries(betweenness demtools ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} sqlite3)
 target_link_libraries(regrid demtools ${Boost_LIBRARIES} sqlite3 dl pthread)
