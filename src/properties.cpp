@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 
     // sanity check of file list
     t_len = ts.size();
-    int chunk_len = world_size > t_len ? world_size : t_len;
+    int chunk_len = t_len > world_size ? world_size : t_len;
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
     BOOST_LOG_TRIVIAL(info) << "chunk_len = " << chunk_len;
     results.resize(chunk_len);
