@@ -167,8 +167,8 @@ int main(int argc, char *argv[])
     write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     bool stop = false;
     v_index = 0;
-    results.clear();
     reqs_world.clear();
+    reqs_world.resize(world_size);
     if (!ts.empty()) {
       int dst_rank = 1;
       while (!ts.empty()) {
@@ -206,8 +206,8 @@ int main(int argc, char *argv[])
           wait_all(reqs_world.begin(), reqs_world.end());
           write_results(runningConf, decomp_str, results, system_path,
                         cellstr_path);
-          results.clear();
           reqs_world.clear();
+          reqs_world.resize(world_size);
           v_index = 0;
           dst_rank = 1;
         }
