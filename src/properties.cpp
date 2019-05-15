@@ -167,14 +167,13 @@ int main(int argc, char *argv[])
     write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     bool stop = false;
     v_index = 0;
+    results.clear();
     if (!ts.empty()) {
       int dst_rank = 1;
       while (!ts.empty()) {
         BOOST_LOG_TRIVIAL(info)
             << "[MASTER] send Job to Rank " << dst_rank << "\n";
-        // Check if there is remaining jobs
 
-        // Tell the slave that a new job is coming.
         world.send(dst_rank, TAG_BREAK, stop);
 
         // Send the new job.
