@@ -114,7 +114,8 @@ int main(int argc, char *argv[])
 
     // sanity check of file list
     t_len = ts.size();
-    int chunk_len = t_len > (world_size - 1) ? world_size - 1 : t_len;
+    int chunk_len =
+        runningConf.chunk_len > t_len ? t_len : runningConf.chunk_len;
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
     BOOST_LOG_TRIVIAL(info) << "chunk_len = " << chunk_len;
     results.resize(chunk_len);
@@ -136,85 +137,24 @@ int main(int argc, char *argv[])
     }
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
-    std::vector<boost::mpi::request> reqs_world(world_size);
+    std::vector<boost::mpi::request> reqs_world;
     BOOST_LOG_TRIVIAL(info) << "Intitalize systemfile";
     initialize_output_files(runningConf, decomp_str, system_path, cellstr_path);
-    for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
-      long timestep{ts.front()};
-      auto cols = db.select(
-          columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
-                  &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
-                  &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
-                  &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-                  &ContactColumns::ct_force_z, &ContactColumns::cellstr,
-                  &ContactColumns::ts),
-          where(c(&ContactColumns::ts) == timestep));
-      auto col_size = cols.size();
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
-                              << " to SLAVE (first loop) " << dst_rank << "\n";
-      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-      BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
-          << "% done";
-      world.send(dst_rank, TAG_SIZE, col_size);
-      world.send(dst_rank, TAG_FILE, cols);
-      ts.pop_front();
-      // Post receive request for new jobs requests by slave [nonblocking]
-      reqs_world[dst_rank - 1] =
-          world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-    }
-    wait_all(reqs_world.begin(), reqs_world.end());
-    write_results(runningConf, decomp_str, results, system_path, cellstr_path);
+    submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world, results,
+                        v_index);
     bool stop = false;
-    v_index = 0;
-    reqs_world.clear();
-    reqs_world.resize(world_size);
+
     if (!ts.empty()) {
-      int dst_rank = 1;
-      while (!ts.empty()) {
-        BOOST_LOG_TRIVIAL(info)
-            << "[MASTER] send Job to Rank " << dst_rank << "\n";
-
-        world.send(dst_rank, TAG_BREAK, stop);
-
-        // Send the new job.
-        long timestep{ts.front()};
-        auto cols = db.select(
-            columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
-                    &ContactColumns::contact_overlap,
-                    &ContactColumns::cn_force_x, &ContactColumns::cn_force_y,
-                    &ContactColumns::cn_force_z, &ContactColumns::ct_force_x,
-                    &ContactColumns::ct_force_y, &ContactColumns::ct_force_z,
-                    &ContactColumns::cellstr, &ContactColumns::ts),
-            where(c(&ContactColumns::ts) == timestep));
-        auto col_size = cols.size();
-        BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
-                                << ") to SLAVE " << dst_rank;
-        BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-        BOOST_LOG_TRIVIAL(info)
-            << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
-            << "% done";
-        world.send(dst_rank, TAG_SIZE, col_size);
-        world.send(dst_rank, TAG_FILE, cols);
-        ts.pop_front();
-        reqs_world[dst_rank - 1] =
-            world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-        dst_rank++;
-        if (v_index == chunk_len) {
-          BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] Vector capacity exceeded. Write results.\n";
-          wait_all(reqs_world.begin(), reqs_world.end());
-          write_results(runningConf, decomp_str, results, system_path,
-                        cellstr_path);
-          reqs_world.clear();
-          reqs_world.resize(world_size);
-          v_index = 0;
-          dst_rank = 1;
-        }
-      }
+      submitPieces(world, runningConf, t_len, ts, decomp_str, results,
+                   system_path, cellstr_path, db, chunk_len, v_index,
+                   reqs_world, stop, world_size);
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
       wait_all(reqs_world.begin(), reqs_world.end());
     }
+    else {
+      wait_all(reqs_world.begin(), reqs_world.end());
+    }
+    write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       world.send(dst_rank, TAG_BREAK, stop);
@@ -245,18 +185,93 @@ int main(int argc, char *argv[])
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
     }
   }
-  if (rank == MASTER) {
-    BOOST_LOG_TRIVIAL(info) << "Writing system sum";
-    // calc_system_sum_write_file(results, f, runningConf);
-    BOOST_LOG_TRIVIAL(info) << "Finished writing system sum";
-    BOOST_LOG_TRIVIAL(info) << "Writing individual particles";
-    BOOST_LOG_TRIVIAL(info) << "Create cellstr map";
-
-    // write_cellstr_res(decomp_str, results, runningConf, cellstr_path);
-    BOOST_LOG_TRIVIAL(info) << "Finished cellstr map";
-  }
 
   return EXIT_SUCCESS;
+}
+void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
+                  int t_len, std::deque<long> &ts,
+                  decom_vec_storage_t decomp_str,
+                  std::vector<aggr_result_t> &results,
+                  const boost::filesystem::path &system_path,
+                  boost::filesystem::path &cellstr_path, c_storage_index_t &db,
+                  int &chunk_len, long &v_index,
+                  std::vector<boost::mpi::request> &reqs_world, bool &stop,
+                  int world_size)
+{
+  while (!ts.empty()) {
+    auto f_rank = wait_any(reqs_world.begin(), reqs_world.end());
+    auto dst_rank = f_rank.first.source();
+    auto iterator = f_rank.second;
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] send Job to Rank " << dst_rank << "\n";
+
+    world.send(dst_rank, TAG_BREAK, stop);
+
+    // Send the new job.
+    long timestep{ts.front()};
+    auto cols = db.select(
+        columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
+                &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
+                &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
+                &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                &ContactColumns::ts),
+        where(c(&ContactColumns::ts) == timestep));
+    auto col_size = cols.size();
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
+                            << ") to SLAVE " << dst_rank;
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+    BOOST_LOG_TRIVIAL(info)
+        << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+        << "% done";
+    world.send(dst_rank, TAG_SIZE, col_size);
+    world.send(dst_rank, TAG_FILE, cols);
+    ts.pop_front();
+    *iterator = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+    if (v_index == chunk_len) {
+      BOOST_LOG_TRIVIAL(info)
+          << "[MASTER] Vector capacity exceeded. Write results.\n";
+      wait_all(reqs_world.begin(), reqs_world.end());
+      write_results(runningConf, decomp_str, results, system_path,
+                    cellstr_path);
+      v_index = 0;
+      reqs_world.clear();
+      results.clear();
+      results.resize(chunk_len);
+      submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world, results,
+                          v_index);
+    }
+  }
+}
+void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
+                         int t_len, std::deque<long> &ts, c_storage_index_t &db,
+                         std::vector<boost::mpi::request> &reqs_world,
+                         std::vector<aggr_result_t> &results, long &v_index)
+{
+  for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
+    long timestep{ts.front()};
+    auto cols = db.select(
+        columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
+                &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
+                &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
+                &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                &ContactColumns::ts),
+        where(c(&ContactColumns::ts) == timestep));
+    auto col_size = cols.size();
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
+                            << " to SLAVE (first loop) " << dst_rank << "\n";
+    BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+    BOOST_LOG_TRIVIAL(info)
+        << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+        << "% done";
+    world.send(dst_rank, TAG_SIZE, col_size);
+    world.send(dst_rank, TAG_FILE, cols);
+    // Post receive request for new jobs requests by slave [nonblocking]
+    reqs_world.push_back(world.irecv(dst_rank, TAG_RESULT, results[v_index++]));
+    ts.pop_front();
+    if (ts.empty())
+      break;
+  }
 }
 
 void write_results(Config &runningConf, decom_vec_storage_t decomp_str,
@@ -300,6 +315,8 @@ void write_cellstr_res(decom_vec_storage_t decomp_str,
     std::ofstream f(cellstr_path.string() + "/" + elem.cellstr + ".csv",
                     std::ios::app);
     for (auto &ts : results) {
+      if (ts.ts == 0)
+        break;
       f << ts.ts << runningConf.sep;
       f << ts.agg[elem.cellstr]["penor"] << runningConf.sep;
       f << ts.agg[elem.cellstr]["petan"] << runningConf.sep;
@@ -313,6 +330,8 @@ void calc_system_sum_write_file(std::vector<aggr_result_t> &results,
 {
   for (auto &elem : results) {
     Accumulator<double> penor, petan, ftan, fnor;
+    if (elem.ts == 0)
+      break;
     for (auto &cell : elem.agg) {
       penor(cell.second["penor"]);
       petan(cell.second["petan"]);

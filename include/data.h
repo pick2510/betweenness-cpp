@@ -47,6 +47,7 @@ private:
     ar &particle_filename;
     ar &v_particles;
     ar &spinup_time;
+    ar &chunk_len;
   }
 
 public:
@@ -62,6 +63,7 @@ public:
   double output_percentile = 0.9;
   int randomly_selected = 20;
   long spinup_time;
+  int chunk_len;
   std::string contact_filename;
   std::string particle_filename;
   std::string v_particles;

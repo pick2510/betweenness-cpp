@@ -6,6 +6,7 @@
 #define DEM_UTILS_PROPERTIES_H
 #include "data.h"
 #include "grid.h"
+#include <boost/mpi.hpp>
 #include <map>
 #include <vector>
 void calc_system_sum_write_file(std::vector<aggr_result_t> &results,
@@ -22,5 +23,20 @@ void write_results(Config &runningConf, decom_vec_storage_t decomp_str,
                    std::vector<aggr_result_t> &results,
                    const boost::filesystem::path &system_path,
                    boost::filesystem::path &cellstr_path);
+
+void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
+                         int t_len, std::deque<long> &ts, c_storage_index_t &db,
+                         std::vector<boost::mpi::request> &reqs_world,
+                         std::vector<aggr_result_t> &results, long &v_index);
+
+void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
+                  int t_len, std::deque<long> &ts,
+                  decom_vec_storage_t decomp_str,
+                  std::vector<aggr_result_t> &results,
+                  const boost::filesystem::path &system_path,
+                  boost::filesystem::path &cellstr_path, c_storage_index_t &db,
+                  int &chunk_len, long &v_index,
+                  std::vector<boost::mpi::request> &reqs_world, bool &stop,
+                  int world_size);
 
 #endif // DEM_UTILS_PROPERTIES_H

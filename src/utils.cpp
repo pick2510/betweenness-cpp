@@ -421,6 +421,7 @@ Config getPropertiesConfigObj(INIReader &reader){
     conf.contact_filename = reader.Get("properties", "ContactfileName", "");
     conf.particle_filename = reader.Get("properties", "ParticlefileName", "");
     conf.spinup_time = reader.GetInteger("properties", "spinupTime", 0);
+    conf.chunk_len = reader.GetInteger("properties", "chunkLen", 0);
     return conf;
 }
 
