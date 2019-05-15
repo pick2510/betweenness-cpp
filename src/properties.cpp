@@ -168,6 +168,7 @@ int main(int argc, char *argv[])
     bool stop = false;
     v_index = 0;
     results.clear();
+    reqs_world.clear();
     if (!ts.empty()) {
       int dst_rank = 1;
       while (!ts.empty()) {
@@ -206,6 +207,7 @@ int main(int argc, char *argv[])
           write_results(runningConf, decomp_str, results, system_path,
                         cellstr_path);
           results.clear();
+          reqs_world.clear();
           v_index = 0;
           dst_rank = 1;
         }
