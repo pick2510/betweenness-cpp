@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
         ts.pop_front();
         reqs_world[dst_rank - 1] =
             world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-
+        dst_rank++;
         if (v_index > chunk_len) {
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] Vector capacity exceeded. Write results.\n";
