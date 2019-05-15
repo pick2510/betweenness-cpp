@@ -46,6 +46,9 @@ int main(int argc, char *argv[])
   std::vector<double> vals{};
   std::vector<aggr_result_t> results{};
   gethostname(hostname, HOSTNAME_LEN);
+  boost::filesystem::path system_path{};
+  boost::filesystem::path cellstr_path{};
+
   if (rank == MASTER) {
     INIReader reader;
     // MASTER CODE
@@ -73,7 +76,10 @@ int main(int argc, char *argv[])
 
     path =
         std::string{runningConf.InputPath + "/" + runningConf.contact_filename};
-
+    cellstr_path = boost::filesystem::path(runningConf.OutputPath + "/cells");
+    system_path = boost::filesystem::path(runningConf.OutputPath + "/system");
+    check_path(cellstr_path);
+    check_path(system_path);
     auto stor = initTSStorage(path);
     auto particles = indexContactStorage(path);
     auto radius_storage = initRadstorage(path);
@@ -108,8 +114,10 @@ int main(int argc, char *argv[])
 
     // sanity check of file list
     t_len = ts.size();
+    int chunk_len = t_len / world_size > 0 ? t_len / world_size : t_len;
     BOOST_LOG_TRIVIAL(info) << "t_len = " << t_len;
-    results.resize(t_len);
+    BOOST_LOG_TRIVIAL(info) << "chunk_len = " << chunk_len;
+    results.resize(chunk_len);
     // Check that processes are <= length of tasks
     if (world_size > t_len + 1) {
       BOOST_LOG_TRIVIAL(error) << "Too many processes (" << world_size
@@ -129,7 +137,8 @@ int main(int argc, char *argv[])
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
     std::vector<boost::mpi::request> reqs_world(world_size);
-
+    BOOST_LOG_TRIVIAL(info) << "Intitalize systemfile";
+    initialize_output_files(runningConf, decomp_str, system_path, cellstr_path);
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       long timestep{ts.front()};
       auto cols = db.select(
@@ -154,50 +163,63 @@ int main(int argc, char *argv[])
       reqs_world[dst_rank - 1] =
           world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
     }
+    wait_all(reqs_world.begin(), reqs_world.end());
+    write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     bool stop = false;
-    while (!ts.empty()) {
-      for (unsigned int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
-        if (reqs_world[dst_rank - 1].test()) {
-          BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] Rank " << dst_rank << " is done.\n";
-          // Check if there is remaining jobs
+    v_index = 0;
+    if (!ts.empty()) {
+      int dst_rank = 1;
+      while (!ts.empty()) {
+        BOOST_LOG_TRIVIAL(info)
+            << "[MASTER] send Job to Rank " << dst_rank << "\n";
+        // Check if there is remaining jobs
 
-          // Tell the slave that a new job is coming.
-          world.send(dst_rank, TAG_BREAK, stop);
+        // Tell the slave that a new job is coming.
+        world.send(dst_rank, TAG_BREAK, stop);
 
-          // Send the new job.
-          long timestep{ts.front()};
-          auto cols = db.select(
-              columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
-                      &ContactColumns::contact_overlap,
-                      &ContactColumns::cn_force_x, &ContactColumns::cn_force_y,
-                      &ContactColumns::cn_force_z, &ContactColumns::ct_force_x,
-                      &ContactColumns::ct_force_y, &ContactColumns::ct_force_z,
-                      &ContactColumns::cellstr, &ContactColumns::ts),
-              where(c(&ContactColumns::ts) == timestep));
-          auto col_size = cols.size();
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
-                                  << ") to SLAVE " << dst_rank;
-          BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+        // Send the new job.
+        long timestep{ts.front()};
+        auto cols = db.select(
+            columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                    &ContactColumns::contact_overlap,
+                    &ContactColumns::cn_force_x, &ContactColumns::cn_force_y,
+                    &ContactColumns::cn_force_z, &ContactColumns::ct_force_x,
+                    &ContactColumns::ct_force_y, &ContactColumns::ct_force_z,
+                    &ContactColumns::cellstr, &ContactColumns::ts),
+            where(c(&ContactColumns::ts) == timestep));
+        auto col_size = cols.size();
+        BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
+                                << ") to SLAVE " << dst_rank;
+        BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+        BOOST_LOG_TRIVIAL(info)
+            << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+            << "% done";
+        world.send(dst_rank, TAG_SIZE, col_size);
+        world.send(dst_rank, TAG_FILE, cols);
+        ts.pop_front();
+        reqs_world[dst_rank - 1] =
+            world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+
+        if (v_index > chunk_len) {
           BOOST_LOG_TRIVIAL(info)
-              << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
-              << "% done";
-          world.send(dst_rank, TAG_SIZE, col_size);
-          world.send(dst_rank, TAG_FILE, cols);
-          ts.pop_front();
-          reqs_world[dst_rank - 1] =
-              world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+              << "[MASTER] Vector capacity exceeded. Write results.\n";
+          wait_all(reqs_world.begin(), reqs_world.end());
+          write_results(runningConf, decomp_str, results, system_path,
+                        cellstr_path);
+          results.clear();
+          v_index = 0;
+          dst_rank = 1;
         }
       }
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
+      wait_all(reqs_world.begin(), reqs_world.end());
     }
-    BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
-    wait_all(reqs_world.begin(), reqs_world.end());
     stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       world.send(dst_rank, TAG_BREAK, stop);
+      BOOST_LOG_TRIVIAL(info)
+          << "[MASTER] Handled all jobs, killed every process.\n";
     }
-    BOOST_LOG_TRIVIAL(info)
-        << "[MASTER] Handled all jobs, killed every process.\n";
   }
   if (rank > MASTER) {
     std::map<int, double> radius = constructMap(keys, vals);
@@ -224,32 +246,58 @@ int main(int argc, char *argv[])
   }
   if (rank == MASTER) {
     BOOST_LOG_TRIVIAL(info) << "Writing system sum";
-    boost::filesystem::path system_path{runningConf.OutputPath + "/system"};
-    check_path(system_path);
-    std::ofstream f(system_path.string() + "/system.csv");
-    f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
-      << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
-    calc_system_sum_write_file(results, f, runningConf);
+    // calc_system_sum_write_file(results, f, runningConf);
     BOOST_LOG_TRIVIAL(info) << "Finished writing system sum";
     BOOST_LOG_TRIVIAL(info) << "Writing individual particles";
     BOOST_LOG_TRIVIAL(info) << "Create cellstr map";
-    boost::filesystem::path cellstr_path{runningConf.OutputPath + "/cells"};
-    check_path(cellstr_path);
-    create_cellstr_map(decomp_str, results, runningConf, cellstr_path);
+
+    // write_cellstr_res(decomp_str, results, runningConf, cellstr_path);
     BOOST_LOG_TRIVIAL(info) << "Finished cellstr map";
   }
 
   return EXIT_SUCCESS;
 }
-void create_cellstr_map(decom_vec_storage_t decomp_str,
-                        std::vector<aggr_result_t> &results,
-                        Config &runningConf,
-                        boost::filesystem::path &cellstr_path)
+
+void write_results(Config &runningConf, decom_vec_storage_t decomp_str,
+                   std::vector<aggr_result_t> &results,
+                   const boost::filesystem::path &system_path,
+                   boost::filesystem::path &cellstr_path)
 {
+  BOOST_LOG_TRIVIAL(info) << "Writing system sum";
+  std::ofstream f(system_path.string() + "/system.csv", std::ios::app);
+  calc_system_sum_write_file(results, f, runningConf);
+  BOOST_LOG_TRIVIAL(info) << "Finished writing system sum";
+
+  BOOST_LOG_TRIVIAL(info) << "Writing individual particles";
+  BOOST_LOG_TRIVIAL(info) << "Create cellstr map";
+  BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
+  BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
+  write_cellstr_res(decomp_str, results, runningConf, cellstr_path);
+  BOOST_LOG_TRIVIAL(info) << "Finished cellstr map";
+}
+void initialize_output_files(const Config &runningConf,
+                             decom_vec_storage_t decomp_str,
+                             const boost::filesystem::path &system_path,
+                             const boost::filesystem::path &cellstr_path)
+{
+  std::ofstream f(system_path.string() + "/system.csv");
+  f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
+    << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
+  f.close();
+  BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
   for (auto &elem : decomp_str) {
     std::ofstream f{cellstr_path.string() + "/" + elem.cellstr + ".csv"};
     f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
       << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
+  }
+}
+void write_cellstr_res(decom_vec_storage_t decomp_str,
+                       std::vector<aggr_result_t> &results, Config &runningConf,
+                       boost::filesystem::path &cellstr_path)
+{
+  for (auto &elem : decomp_str) {
+    std::ofstream f(cellstr_path.string() + "/" + elem.cellstr + ".csv",
+                    std::ios::app);
     for (auto &ts : results) {
       f << ts.ts << runningConf.sep;
       f << ts.agg[elem.cellstr]["penor"] << runningConf.sep;
