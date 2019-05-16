@@ -238,7 +238,9 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
         reqs_world.clear();
         results.clear();
         results.resize(chunk_len);
-        world.send(dst_rank, TAG_BREAK, stop);
+        for (dst_rank = 1; dst_rank < world_size; ++dst_rank) {
+          world.send(dst_rank, TAG_BREAK, stop);
+        }
         submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world,
                             results, v_index);
       }
