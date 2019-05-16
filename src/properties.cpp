@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 
   if (rank == MASTER) {
     auto db = indexContactStorage(path);
-
+    long counter = 0;
     // sanity check of file list
     t_len = ts.size();
     int chunk_len =
@@ -141,13 +141,13 @@ int main(int argc, char *argv[])
     BOOST_LOG_TRIVIAL(info) << "Intitalize systemfile";
     initialize_output_files(runningConf, decomp_str, system_path, cellstr_path);
     submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world, results,
-                        v_index);
+                        v_index, counter);
     bool stop = false;
 
     if (!ts.empty()) {
       submitPieces(world, runningConf, t_len, ts, decomp_str, results,
                    system_path, cellstr_path, db, chunk_len, v_index,
-                   reqs_world, stop, world_size);
+                   reqs_world, stop, world_size, counter);
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
       wait_all(reqs_world.begin(), reqs_world.end());
     }
@@ -195,8 +195,8 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   const boost::filesystem::path &system_path,
                   boost::filesystem::path &cellstr_path, c_storage_index_t &db,
                   int &chunk_len, long &v_index,
-                  std::vector<boost::mpi::request> &reqs_world, bool &stop,
-                  int world_size)
+                  std::vector<request> &reqs_world, bool &stop, int world_size,
+                  long &counter)
 {
   while (!ts.empty()) {
     if (auto f_rank = test_any(reqs_world.begin(), reqs_world.end())) {
@@ -221,8 +221,9 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
                               << ") to SLAVE " << dst_rank;
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+      counter++;
       BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+          << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
           << "% done";
       world.send(dst_rank, TAG_SIZE, col_size);
       world.send(dst_rank, TAG_FILE, cols);
@@ -242,15 +243,16 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
           world.send(dst_rank, TAG_BREAK, stop);
         }
         submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world,
-                            results, v_index);
+                            results, v_index, counter);
       }
     }
   }
 }
 void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                          int t_len, std::deque<long> &ts, c_storage_index_t &db,
-                         std::vector<boost::mpi::request> &reqs_world,
-                         std::vector<aggr_result_t> &results, long &v_index)
+                         std::vector<request> &reqs_world,
+                         std::vector<aggr_result_t> &results, long &v_index,
+                         long &counter)
 {
   for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
     long timestep{ts.front()};
@@ -267,8 +269,9 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                             << " to SLAVE (first loop) " << dst_rank << "\n";
     BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
     BOOST_LOG_TRIVIAL(info)
-        << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
-        << "% done";
+    counter++;
+    << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
+    << "% done";
     world.send(dst_rank, TAG_SIZE, col_size);
     world.send(dst_rank, TAG_FILE, cols);
     // Post receive request for new jobs requests by slave [nonblocking]
