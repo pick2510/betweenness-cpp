@@ -195,8 +195,8 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   const boost::filesystem::path &system_path,
                   boost::filesystem::path &cellstr_path, c_storage_index_t &db,
                   int &chunk_len, long &v_index,
-                  std::vector<request> &reqs_world, bool &stop, int world_size,
-                  long &counter)
+                  std::vector<boost::mpi::request> &reqs_world, bool &stop,
+                  int world_size, long &counter)
 {
   while (!ts.empty()) {
     if (auto f_rank = test_any(reqs_world.begin(), reqs_world.end())) {
@@ -250,7 +250,7 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
 }
 void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                          int t_len, std::deque<long> &ts, c_storage_index_t &db,
-                         std::vector<request> &reqs_world,
+                         std::vector<boost::mpi::request> &reqs_world,
                          std::vector<aggr_result_t> &results, long &v_index,
                          long &counter)
 {
