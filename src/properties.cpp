@@ -180,7 +180,8 @@ int main(int argc, char *argv[])
       pe.aggregate_per_cell();
       auto const properties_map = pe.getAggregateMap();
       aggr_result_t aggregate{.agg = properties_map, .ts = timestep};
-      world.send(0, TAG_RESULT, aggregate);
+      auto req = world.isend(0, TAG_RESULT, aggregate);
+      req.wait();
       world.recv(0, TAG_BREAK, stop);
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
     }
