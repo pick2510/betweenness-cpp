@@ -268,8 +268,8 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
                             << " to SLAVE (first loop) " << dst_rank << "\n";
     BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-    BOOST_LOG_TRIVIAL(info)
     counter++;
+    BOOST_LOG_TRIVIAL(info)
     << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
     << "% done";
     world.send(dst_rank, TAG_SIZE, col_size);
