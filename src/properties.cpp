@@ -180,8 +180,7 @@ int main(int argc, char *argv[])
       pe.aggregate_per_cell();
       auto const properties_map = pe.getAggregateMap();
       aggr_result_t aggregate{.agg = properties_map, .ts = timestep};
-      auto req = world.isend(0, TAG_RESULT, aggregate);
-      req.wait();
+      world.send(0, TAG_RESULT, aggregate);
       world.recv(0, TAG_BREAK, stop);
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
     }
@@ -200,46 +199,48 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   int world_size)
 {
   while (!ts.empty()) {
-    auto f_rank = wait_any(reqs_world.begin(), reqs_world.end());
-    auto dst_rank = f_rank.first.source();
-    auto iterator = f_rank.second;
-    BOOST_LOG_TRIVIAL(info) << "[MASTER] send Job to Rank " << dst_rank << "\n";
-
-    world.send(dst_rank, TAG_BREAK, stop);
-
-    // Send the new job.
-    long timestep{ts.front()};
-    auto cols = db.select(
-        columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
-                &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
-                &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
-                &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-                &ContactColumns::ct_force_z, &ContactColumns::cellstr,
-                &ContactColumns::ts),
-        where(c(&ContactColumns::ts) == timestep));
-    auto col_size = cols.size();
-    BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
-                            << ") to SLAVE " << dst_rank;
-    BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
-    BOOST_LOG_TRIVIAL(info)
-        << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
-        << "% done";
-    world.send(dst_rank, TAG_SIZE, col_size);
-    world.send(dst_rank, TAG_FILE, cols);
-    ts.pop_front();
-    *iterator = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
-    if (v_index == chunk_len) {
+    if (auto f_rank = test_any(reqs_world.begin(), reqs_world.end())) {
+      auto dst_rank = f_rank.value().first.source();
+      auto iterator = f_rank.value().second;
       BOOST_LOG_TRIVIAL(info)
-          << "[MASTER] Vector capacity exceeded. Write results.\n";
-      wait_all(reqs_world.begin(), reqs_world.end());
-      write_results(runningConf, decomp_str, results, system_path,
-                    cellstr_path);
-      v_index = 0;
-      reqs_world.clear();
-      results.clear();
-      results.resize(chunk_len);
-      submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world, results,
-                          v_index);
+          << "[MASTER] send Job to Rank " << dst_rank << "\n";
+
+      world.send(dst_rank, TAG_BREAK, stop);
+
+      // Send the new job.
+      long timestep{ts.front()};
+      auto cols = db.select(
+          columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
+                  &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
+                  &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
+                  &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
+                  &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                  &ContactColumns::ts),
+          where(c(&ContactColumns::ts) == timestep));
+      auto col_size = cols.size();
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
+                              << ") to SLAVE " << dst_rank;
+      BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
+      BOOST_LOG_TRIVIAL(info)
+          << "[MASTER] " << (static_cast<double>(v_index) / t_len) * 100.0
+          << "% done";
+      world.send(dst_rank, TAG_SIZE, col_size);
+      world.send(dst_rank, TAG_FILE, cols);
+      ts.pop_front();
+      *iterator = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
+      if (v_index == chunk_len) {
+        BOOST_LOG_TRIVIAL(info)
+            << "[MASTER] Vector capacity exceeded. Write results.\n";
+        wait_all(reqs_world.begin(), reqs_world.end());
+        write_results(runningConf, decomp_str, results, system_path,
+                      cellstr_path);
+        v_index = 0;
+        reqs_world.clear();
+        results.clear();
+        results.resize(chunk_len);
+        submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world,
+                            results, v_index);
+      }
     }
   }
 }
