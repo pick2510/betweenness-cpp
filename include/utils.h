@@ -60,7 +60,7 @@ std::vector<std::string> getCartesianProduct(std::vector<int> &x,
                                              std::vector<int> &z);
 void shuffleParticles(std::vector<int> &shuffleVec);
 void LogConfig(Config &conf);
-
+Config getVelocityConfigObj(INIReader &reader);
 void check_path(const boost::filesystem::path &path);
 Config getGridConfigObj(INIReader &reader);
 Config getPropertiesConfigObj(INIReader &reader);

@@ -414,6 +414,19 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
   return conf;
 }
 
+Config getVelocityConfigObj(INIReader &reader)
+{
+  Config conf;
+  conf.InputPath = reader.Get("velocity", "inputPath", "");
+  conf.OutputPath = reader.Get("velocity", "outputPath", "");
+  conf.output_percentile = reader.GetReal("velocity", "outputPercentile", 0.9);
+  conf.randomly_selected =
+      static_cast<int>(reader.GetInteger("velocity", "randomlySelected", 20));
+  conf.contact_filename = reader.Get("velocity", "ContactfileName", "");
+  conf.particle_filename = reader.Get("velocity", "ParticlefileName", "");
+  return conf;
+}
+
 Config getPropertiesConfigObj(INIReader &reader){
     Config conf;
     conf.InputPath = reader.Get("properties", "inputPath", "");
