@@ -221,6 +221,7 @@ inline auto ParticleIndexStorage(const std::string &path)
 using c_storage_t = decltype(initContactStorage(""));
 using p_storage_t = decltype(ParticleStorage(""));
 using c_storage_index_t = decltype(indexContactStorage(""));
+using p_storage_index_t = decltype(ParticleIndexStorage(""));
 using tuple_storage_t =
     decltype(std::declval<c_storage_index_t>().select(sqlite_orm::columns(
         &ContactColumns::p1_id, &ContactColumns::p2_id,

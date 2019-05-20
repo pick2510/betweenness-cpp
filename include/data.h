@@ -352,6 +352,11 @@ struct agg_result_per_particle_t {
   aggregate_map_per_particle agg;
 };
 
+struct p_velocity_t {
+  long ts;
+  std::map<int, std::map<std::string, double>> vel;
+};
+
 struct aggr_result_t {
   friend class boost::serialization::access;
   template <class Archive>
