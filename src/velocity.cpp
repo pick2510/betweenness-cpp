@@ -22,9 +22,6 @@
 #include <serialize_tuple.h>
 #include <tuple>
 
-void write_headers(const Config &runningConf,
-                   const std::set<int> &selected_particles,
-                   const boost::filesystem::path &out_path);
 int main(int argc, char *argv[])
 {
   using namespace sqlite_orm;
@@ -71,28 +68,40 @@ int main(int argc, char *argv[])
   for (const auto &elem : ts_list) {
     ts.push_back(elem.ts);
   }
+  auto ts_len = ts.size();
   assert(runningConf.randomly_selected <= partids.size());
   auto selected_particles = select_particles(partids, runningConf);
   std::vector<p_velocity_t> results{};
-  process_ts(particles, ts, selected_particles, results);
+  process_ts(particles, ts, selected_particles, results, ts_len);
   auto out_path = boost::filesystem::path(runningConf.OutputPath +
                                           std::string{"/velocities"});
   BOOST_LOG_TRIVIAL(info) << out_path.string();
   check_path(out_path);
   write_headers(runningConf, selected_particles, out_path);
+  write_results(runningConf, selected_particles, results, out_path, 0);
+}
+void write_results(const Config &runningConf,
+                   const std::set<int> &selected_particles,
+                   std::vector<p_velocity_t> &results,
+                   const boost::filesystem::path &out_path, int ts_len)
+{
   std::map<int, std::ofstream> f_streams;
   for (const auto &part : selected_particles) {
     f_streams[part] = std::ofstream(
         out_path.string() + "/" + std::to_string(part) + ".csv", std::ios::app);
   }
-
+  int counter = 0;
   for (auto &res : results) {
+
     for (const auto &part : selected_particles) {
       f_streams.at(part) << res.ts << runningConf.sep << res.vel[part]["p_vx"]
                          << runningConf.sep << res.vel[part]["p_vy"]
                          << runningConf.sep << res.vel[part]["p_vz"]
                          << runningConf.sep << res.vel[part]["mag_v"] << "\n";
     }
+    BOOST_LOG_TRIVIAL(info)
+        << static_cast<double>(counter) / ts_len * 100.0 << "% ";
+    counter++;
   }
 }
 void write_headers(const Config &runningConf,
@@ -107,9 +116,10 @@ void write_headers(const Config &runningConf,
 }
 void process_ts(p_storage_index_t &particles, const std::vector<long> &ts,
                 const std::set<int> &selected_particles,
-                std::vector<p_velocity_t> &results)
+                std::vector<p_velocity_t> &results, int ts_len)
 {
   using namespace sqlite_orm;
+  int counter = 0;
   for (auto &elem : ts) {
     p_velocity_t p_velocity;
     p_velocity.ts = elem;
@@ -119,6 +129,7 @@ void process_ts(p_storage_index_t &particles, const std::vector<long> &ts,
                                  &ParticleColumns::p_vx, &ParticleColumns::p_vy,
                                  &ParticleColumns::p_vz),
                          where(c(&ParticleColumns::ts) == elem));
+    BOOST_LOG_TRIVIAL(info) << "Timestep: " << p_velocity.ts;
     for (auto &particle : timestep) {
       auto it = selected_particles.find(std::get<1>(particle));
       if (it == selected_particles.end())
@@ -133,6 +144,9 @@ void process_ts(p_storage_index_t &particles, const std::vector<long> &ts,
     }
     p_velocity.vel = p_velocities_m;
     results.push_back(p_velocity);
+    BOOST_LOG_TRIVIAL(info)
+        << static_cast<double>(counter) / ts_len * 100.0 << "% ";
+    counter++;
   }
 }
 std::set<int> select_particles(std::vector<int> &partids,
