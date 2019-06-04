@@ -37,26 +37,30 @@ class GraphSQLite {
 
 private:
   Centrality_Map c_map;
-  const std::map<std::string, int> &v_map;
-  const std::string path;
+  std::map<std::string, int> &v_map;
   long timestep;
-  std::vector<ContactColumns> cols;
+  std::vector<ContactColumns> contact_cols;
   // Storage db;
   // std::map<int, double> betweenness_centrality;
   std::vector<int> keys;
   std::vector<double> vals;
   std::vector<double> v_betweeness;
+  std::vector<ParticleColumns> &part_cols;
+  std::multimap<std::string, double> cell_agg;
   Dump_Graph graph;
-  Acc acc;
+  const std::vector<decomp_table> &decomp;
+  std::map<int, std::string> inv_map, part_cell_map;
+  Acc acc_total_domain;
   void generate_graph();
   void calculate_betweenness_centrality();
-  void calculate_accumulator();
+  void calculate_accumulators();
 
 public:
-  GraphSQLite(const std::map<std::string, int> &vertices_map,
-              const std::string &stor, long ts,
-              std::vector<ContactColumns> &cols);
-  Result get_result();
+  GraphSQLite(std::map<std::string, int> &vertices_map, long ts,
+              std::vector<ContactColumns> &contact_cols,
+              const std::vector<decomp_table> &decomp,
+              std::vector<ParticleColumns> &part_cols);
+  Betweenness_Result get_result();
   void calc();
   std::map<int, double> get_centrality_map();
   long get_timestep();

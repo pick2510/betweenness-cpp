@@ -50,7 +50,7 @@ private:
 
 public:
   Graph(std::string &Path, const std::map<std::string, int> &vertices_map);
-  Result get_result();
+  Betweenness_Result get_result();
   void calc();
   std::map<int, double> get_centrality_map();
   long get_timestep();

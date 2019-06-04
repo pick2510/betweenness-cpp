@@ -15,6 +15,7 @@ constexpr int TAG_BREAK = 2;
 constexpr int TAG_TS = 5;
 constexpr int TAG_SIZE = 3;
 constexpr int TAG_FILE = 10;
+constexpr int TAG_P_COL = 11;
 constexpr int HOSTNAME_LEN = 255;
 constexpr int TAG_PART_TS = 20;
 
@@ -69,7 +70,7 @@ public:
   std::string v_particles;
 };
 
-struct Result {
+struct Betweenness_Result {
 private:
   friend class boost::serialization::access;
   template <class Archive>
@@ -79,6 +80,7 @@ private:
     ar &keys;
     ar &vals;
     ar &mean;
+    ar &aggr_per_cell;
     ar &var;
     ar &std;
     ar &skew;
@@ -91,6 +93,7 @@ public:
   long ts;
   std::vector<int> keys;
   std::vector<double> vals;
+  std::map<std::string, std::map<std::string, double>> aggr_per_cell;
   double mean;
   double var;
   double std;

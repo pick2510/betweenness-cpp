@@ -412,7 +412,7 @@ SQLITE_API int sqlite3_exec(
 );
 
 /*
-** CAPI3REF: Result Codes
+** CAPI3REF: Betweenness_Result Codes
 ** KEYWORDS: {result code definitions}
 **
 ** Many SQLite functions return an integer result code from the set shown
@@ -457,7 +457,7 @@ SQLITE_API int sqlite3_exec(
 /* end-of-error-codes */
 
 /*
-** CAPI3REF: Extended Result Codes
+** CAPI3REF: Extended Betweenness_Result Codes
 ** KEYWORDS: {extended result code definitions}
 **
 ** In its default configuration, SQLite API routines return one of 30 integer
@@ -2230,7 +2230,7 @@ struct sqlite3_mem_methods {
 #define SQLITE_DBCONFIG_MAX                   1011 /* Largest DBCONFIG */
 
 /*
-** CAPI3REF: Enable Or Disable Extended Result Codes
+** CAPI3REF: Enable Or Disable Extended Betweenness_Result Codes
 ** METHOD: sqlite3
 **
 ** ^The sqlite3_extended_result_codes() routine enables or disables the
@@ -4210,11 +4210,11 @@ SQLITE_API int sqlite3_bind_parameter_index(sqlite3_stmt*, const char *zName);
 SQLITE_API int sqlite3_clear_bindings(sqlite3_stmt*);
 
 /*
-** CAPI3REF: Number Of Columns In A Result Set
+** CAPI3REF: Number Of Columns In A Betweenness_Result Set
 ** METHOD: sqlite3_stmt
 **
 ** ^Return the number of columns in the result set returned by the
-** [prepared statement]. ^If this routine returns 0, that means the 
+** [prepared statement]. ^If this routine returns 0, that means the
 ** [prepared statement] returns no data (for example an [UPDATE]).
 ** ^However, just because this routine returns a positive number does not
 ** mean that one or more rows of data will be returned.  ^A SELECT statement
@@ -4226,7 +4226,7 @@ SQLITE_API int sqlite3_clear_bindings(sqlite3_stmt*);
 SQLITE_API int sqlite3_column_count(sqlite3_stmt *pStmt);
 
 /*
-** CAPI3REF: Column Names In A Result Set
+** CAPI3REF: Column Names In A Betweenness_Result Set
 ** METHOD: sqlite3_stmt
 **
 ** ^These routines return the name assigned to a particular column
@@ -4256,7 +4256,7 @@ SQLITE_API const char *sqlite3_column_name(sqlite3_stmt*, int N);
 SQLITE_API const void *sqlite3_column_name16(sqlite3_stmt*, int N);
 
 /*
-** CAPI3REF: Source Of Data In A Query Result
+** CAPI3REF: Source Of Data In A Query Betweenness_Result
 ** METHOD: sqlite3_stmt
 **
 ** ^These routines provide a means to determine the database, table, and
@@ -4309,7 +4309,7 @@ SQLITE_API const char *sqlite3_column_origin_name(sqlite3_stmt*,int);
 SQLITE_API const void *sqlite3_column_origin_name16(sqlite3_stmt*,int);
 
 /*
-** CAPI3REF: Declared Datatype Of A Query Result
+** CAPI3REF: Declared Datatype Of A Query Betweenness_Result
 ** METHOD: sqlite3_stmt
 **
 ** ^(The first parameter is a [prepared statement].
@@ -4479,7 +4479,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 #define SQLITE3_TEXT     3
 
 /*
-** CAPI3REF: Result Values From A Query
+** CAPI3REF: Betweenness_Result Values From A Query
 ** KEYWORDS: {column access functions}
 ** METHOD: sqlite3_stmt
 **
@@ -4491,7 +4491,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** <tr><td><b>sqlite3_column_int64</b><td>&rarr;<td>64-bit INTEGER result
 ** <tr><td><b>sqlite3_column_text</b><td>&rarr;<td>UTF-8 TEXT result
 ** <tr><td><b>sqlite3_column_text16</b><td>&rarr;<td>UTF-16 TEXT result
-** <tr><td><b>sqlite3_column_value</b><td>&rarr;<td>The result as an 
+** <tr><td><b>sqlite3_column_value</b><td>&rarr;<td>The result as an
 ** [sqlite3_value|unprotected sqlite3_value] object.
 ** <tr><td>&nbsp;<td>&nbsp;<td>&nbsp;
 ** <tr><td><b>sqlite3_column_bytes</b><td>&rarr;<td>Size of a BLOB
@@ -4539,7 +4539,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** The return value of sqlite3_column_type() can be used to decide which
 ** of the first six interface should be used to extract the column value.
 ** The value returned by sqlite3_column_type() is only meaningful if no
-** automatic type conversions have occurred for the value in question.  
+** automatic type conversions have occurred for the value in question.
 ** After a type conversion, the result of calling sqlite3_column_type()
 ** is undefined, though harmless.  Future
 ** versions of SQLite may change the behavior of sqlite3_column_type()
@@ -4567,7 +4567,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** the number of bytes in that string.
 ** ^If the result is NULL, then sqlite3_column_bytes16() returns zero.
 **
-** ^The values returned by [sqlite3_column_bytes()] and 
+** ^The values returned by [sqlite3_column_bytes()] and
 ** [sqlite3_column_bytes16()] do not include the zero terminators at the end
 ** of the string.  ^For clarity: the values returned by
 ** [sqlite3_column_bytes()] and [sqlite3_column_bytes16()] are the number of
@@ -4586,7 +4586,7 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** to routines like [sqlite3_value_int()], [sqlite3_value_text()],
 ** or [sqlite3_value_bytes()], the behavior is not threadsafe.
 ** Hence, the sqlite3_column_value() interface
-** is normally only useful within the implementation of 
+** is normally only useful within the implementation of
 ** [application-defined SQL functions] or [virtual tables], not within
 ** top-level application code.
 **
@@ -4600,10 +4600,10 @@ SQLITE_API int sqlite3_data_count(sqlite3_stmt *pStmt);
 ** <table border="1">
 ** <tr><th> Internal<br>Type <th> Requested<br>Type <th>  Conversion
 **
-** <tr><td>  NULL    <td> INTEGER   <td> Result is 0
-** <tr><td>  NULL    <td>  FLOAT    <td> Result is 0.0
-** <tr><td>  NULL    <td>   TEXT    <td> Result is a NULL pointer
-** <tr><td>  NULL    <td>   BLOB    <td> Result is a NULL pointer
+** <tr><td>  NULL    <td> INTEGER   <td> Betweenness_Result is 0
+** <tr><td>  NULL    <td>  FLOAT    <td> Betweenness_Result is 0.0
+** <tr><td>  NULL    <td>   TEXT    <td> Betweenness_Result is a NULL pointer
+** <tr><td>  NULL    <td>   BLOB    <td> Betweenness_Result is a NULL pointer
 ** <tr><td> INTEGER  <td>  FLOAT    <td> Convert from integer to float
 ** <tr><td> INTEGER  <td>   TEXT    <td> ASCII rendering of the integer
 ** <tr><td> INTEGER  <td>   BLOB    <td> Same as INTEGER->TEXT
@@ -5275,7 +5275,7 @@ typedef void (*sqlite3_destructor_type)(void*);
 #define SQLITE_TRANSIENT   ((sqlite3_destructor_type)-1)
 
 /*
-** CAPI3REF: Setting The Result Of An SQL Function
+** CAPI3REF: Setting The Betweenness_Result Of An SQL Function
 ** METHOD: sqlite3_context
 **
 ** These routines are used by the xFunc or xFinal callbacks that
@@ -5387,7 +5387,7 @@ typedef void (*sqlite3_destructor_type)(void*);
 **
 ** ^The sqlite3_result_pointer(C,P,T,D) interface sets the result to an
 ** SQL NULL value, just like [sqlite3_result_null(C)], except that it
-** also associates the host-language pointer P or type T with that 
+** also associates the host-language pointer P or type T with that
 ** NULL value such that the pointer can be retrieved within an
 ** [application-defined SQL function] using [sqlite3_value_pointer()].
 ** ^If the D parameter is not NULL, then it is a pointer to a destructor
@@ -8908,7 +8908,7 @@ SQLITE_API int sqlite3_stmt_scanstatus(
   sqlite3_stmt *pStmt,      /* Prepared statement for which info desired */
   int idx,                  /* Index of loop to report on */
   int iScanStatusOp,        /* Information desired.  SQLITE_SCANSTAT_* */
-  void *pOut                /* Result written here */
+    void *pOut           /* Betweenness_Result written here */
 );     
 
 /*

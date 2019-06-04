@@ -38,14 +38,14 @@ std::string getConfigPath(int &argc, char **argv);
 Config getBetweennessConfigObj(INIReader &reader, const char *type);
 INIReader parseConfigFile(const std::string &path);
 void goto_line(std::ifstream &file, unsigned long n);
-bool cmp_ts(const Result &a, const Result &b);
+bool cmp_ts(const Betweenness_Result &a, const Betweenness_Result &b);
 bool cmp_avg_map(const std::pair<std::string, double> &a,
                  const std::pair<std::string, double> &b);
 void write_ts_header(std::ofstream &out, const Config &conf);
 void write_cent_header(std::ofstream &out, const Config &conf);
 void output_centrality_ts(std::ofstream &ts_mean_file,
                           const Config &runningConf,
-                          const std::vector<Result> &results,
+                          const std::vector<Betweenness_Result> &results,
                           const std::map<int, std::string> &inv_vertice_map);
 void output_particle_complete_ts(
     const Config &runningConf, const Eigen::Map<Eigen::MatrixXd> &mat,
@@ -55,6 +55,9 @@ void output_particle_ts(const Config &runningConf,
                         const Eigen::Map<Eigen::MatrixXd> &mat,
                         const std::map<int, std::string> &inv_vertice_map,
                         const std::vector<long> &ts);
+void output_cell_ts(const Config &runningConf,
+                    std::vector<Betweenness_Result> &result,
+                    std::vector<long> &ts, std::vector<decomp_table> &decomp);
 std::vector<std::string> getCartesianProduct(std::vector<int> &x,
                                              std::vector<int> &y,
                                              std::vector<int> &z);
