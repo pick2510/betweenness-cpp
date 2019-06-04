@@ -1,3 +1,5 @@
+
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -44,10 +46,12 @@ int main(int argc, char **argv)
   std::map<std::string, int> vertice_map{};
   std::vector<std::string> keys{};
   std::vector<int> vals{};
-  std::vector<Result> results{};
+  std::vector<Betweenness_Result> results{};
   std::deque<long> ts{};
   std::vector<long> ts_res{};
-  std::string path{};
+  std::string path_contact{};
+  std::string path_particle{};
+  std::vector<decomp_table> decomp_tab{};
   std::unique_ptr<double[]> ts_particle;
   auto rank = world.rank();
   auto world_size = world.size();
@@ -67,30 +71,37 @@ int main(int argc, char **argv)
     try {
       configPath = getConfigPath(argc, argv);
     }
-    catch (std::invalid_argument e) {
+    catch (std::invalid_argument &e) {
       BOOST_LOG_TRIVIAL(info) << e.what() << std::endl;
       exit(EXIT_FAILURE);
     }
     try {
       reader = parseConfigFile(configPath);
     }
-    catch (std::invalid_argument e) {
+    catch (std::invalid_argument &e) {
       BOOST_LOG_TRIVIAL(info) << e.what() << std::endl;
       exit(EXIT_FAILURE);
     }
     runningConf = getBetweennessConfigObj(reader, "betweenness_sqlite");
     // define pattern fro globbing chain files, trim strings, and glob
 
-    path =
+    path_contact =
         std::string{runningConf.InputPath + "/" + runningConf.contact_filename};
-    auto stor = initTSStorage(path);
-    auto particles = indexContactStorage(path);
-    particles.sync_schema();
-    auto radius_storage = initRadstorage(path);
+    path_particle = std::string{runningConf.InputPath + "/" +
+                                runningConf.particle_filename};
+    auto ts_store = initTSStorage(path_contact);
+    auto contact_store = indexContactStorage(path_contact);
+    auto particle_store = ParticleIndexStorage(path_particle);
+    auto decomp_db = initDecompstorage(path_contact);
+    decomp_tab = decomp_db.get_all<decomp_table>();
+    contact_store.sync_schema();
+    particle_store.sync_schema();
+    auto radius_storage = initRadstorage(path_contact);
     for (auto &elem : radius_storage.iterate<radius>()) {
       radius_map[elem.id] = elem.rad;
     }
-    auto ts_list = stor.get_all<ts_column>();
+
+    auto ts_list = ts_store.get_all<ts_column>();
     for (const auto &elem : ts_list) {
       ts.push_back(elem.ts);
     }
@@ -105,7 +116,7 @@ int main(int argc, char **argv)
   // Broadcast keys and vals vector for vertice_map reconstruction.
   broadcast(world, keys, MASTER);
   broadcast(world, vals, MASTER);
-  broadcast(world, path, MASTER);
+  broadcast(world, decomp_tab, MASTER);
 
   // MASTER CODE
 
@@ -141,18 +152,24 @@ int main(int argc, char **argv)
 
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
       long timestep{ts.front()};
-      auto db = indexContactStorage(path);
-      auto columns =
-          db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
-      auto col_size = columns.size();
+      auto contact_db = indexContactStorage(path_contact);
+      auto particle_db = ParticleIndexStorage(path_particle);
+      auto contact_columns = contact_db.get_all<ContactColumns>(
+          where(c(&ContactColumns::ts) == timestep));
+      auto particle_columns = particle_db.get_all<ParticleColumns>(
+          where(c(&ParticleColumns::ts) == timestep));
+      auto contact_col_size = contact_columns.size();
+      auto particle_col_size = particle_columns.size();
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
                               << " to SLAVE (first loop) " << dst_rank << "\n";
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
       BOOST_LOG_TRIVIAL(info)
           << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
       world.send(dst_rank, TAG_TS, timestep);
-      world.send(dst_rank, TAG_SIZE, col_size);
-      world.send(dst_rank, TAG_FILE, columns);
+      world.send(dst_rank, TAG_SIZE, contact_col_size);
+      world.send(dst_rank, TAG_FILE, contact_columns);
+      world.send(dst_rank, TAG_SIZE, particle_col_size);
+      world.send(dst_rank, TAG_P_COL, particle_columns);
       ts.pop_front();
       // Post receive request for new jobs requests by slave [nonblocking]
       reqs_world[dst_rank - 1] =
@@ -174,18 +191,24 @@ int main(int argc, char **argv)
 
           // Send the new job.
           long timestep{ts.front()};
-          auto db = indexContactStorage(path);
-          auto columns = db.get_all<ContactColumns>(
+          auto contact_db = indexContactStorage(path_contact);
+          auto particle_db = ParticleIndexStorage(path_particle);
+          auto contact_columns = contact_db.get_all<ContactColumns>(
               where(c(&ContactColumns::ts) == timestep));
-          auto col_size = columns.size();
+          auto particle_columns = particle_db.get_all<ParticleColumns>(
+              where(c(&ParticleColumns::ts) == timestep));
+          auto contact_col_size = contact_columns.size();
+          auto particle_col_size = particle_columns.size();
           BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
                                   << ") to SLAVE " << dst_rank;
           BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
           BOOST_LOG_TRIVIAL(info)
               << "[MASTER] " << (v_index / t_len) * 100.0 << "% done";
           world.send(dst_rank, TAG_TS, timestep);
-          world.send(dst_rank, TAG_SIZE, col_size);
-          world.send(dst_rank, TAG_FILE, columns);
+          world.send(dst_rank, TAG_SIZE, contact_col_size);
+          world.send(dst_rank, TAG_FILE, contact_columns);
+          world.send(dst_rank, TAG_SIZE, particle_col_size);
+          world.send(dst_rank, TAG_PART_TS, particle_col_size);
           ts.pop_front();
           reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
@@ -214,27 +237,33 @@ int main(int argc, char **argv)
     bool stop = false;
     while (!stop) {
       long ts;
-      std::vector<ContactColumns> cols{};
-      size_t col_size;
+      std::vector<ContactColumns> contact_cols{};
+      std::vector<ParticleColumns> particle_cols{};
+      size_t contact_col_size;
+      size_t particle_col_size;
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
       world.recv(0, TAG_TS, ts);
       BOOST_LOG_TRIVIAL(info) << ts;
-      world.recv(0, TAG_SIZE, col_size);
-      cols.resize(col_size);
-      world.recv(0, TAG_FILE, cols);
+      world.recv(0, TAG_SIZE, contact_col_size);
+      contact_cols.resize(contact_col_size);
+      world.recv(0, TAG_FILE, contact_cols);
+      world.recv(0, TAG_SIZE, particle_col_size);
+      particle_cols.resize(particle_col_size);
+      world.recv(0, TAG_P_COL, particle_cols);
 
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
                               << ") Received job " << ts << " from MASTER.\n";
       // Perform "job"
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Start Job\n";
-      GraphSQLite mygraph(v_map, path, ts, cols);
+      GraphSQLite mygraph(v_map, ts, contact_cols, decomp_tab, particle_cols);
       mygraph.calc();
       auto res = mygraph.get_result();
       // Send result
-      BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] (" << hostname
-                              << ") Done with job " << ts << ". Send Result.\n";
+      BOOST_LOG_TRIVIAL(info)
+          << "[SLAVE: " << rank << "] (" << hostname << ") Done with job " << ts
+          << ". Send Betweenness_Result.\n";
       world.send(0, TAG_RESULT, res);
       tscom.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
       // Check if a new job is coming
@@ -249,8 +278,9 @@ int main(int argc, char **argv)
   if (rank == MASTER) {
     std::sort(results.begin(), results.end(), cmp_ts);
     ts_res.reserve(results.size());
-    std::for_each(results.begin(), results.end(),
-                  [&ts_res](Result const &res) { ts_res.push_back(res.ts); });
+    std::for_each(
+        results.begin(), results.end(),
+        [&ts_res](Betweenness_Result const &res) { ts_res.push_back(res.ts); });
     std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +
@@ -260,6 +290,19 @@ int main(int argc, char **argv)
     BOOST_LOG_TRIVIAL(info) << "TEST PARTICLE:  " << ts_particle[12];
     Eigen::Map<Eigen::MatrixXd> particle_matrix(ts_particle.get(), t_len,
                                                 vertice_map.size());
-    output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts_res);
+#if defined(_OPENMP)
+#pragma omp parallel
+#pragma omp single
+    {
+#pragma omp task
+#endif
+      output_particle_ts(runningConf, particle_matrix, inv_vertice_map, ts_res);
+#if defined(_OPENMP)
+#pragma omp task
+#endif
+      output_cell_ts(runningConf, results, ts_res, decomp_tab);
+#if defined(_OPENMP)
+    }
+#endif
   }
 }

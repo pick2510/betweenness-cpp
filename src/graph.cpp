@@ -76,9 +76,9 @@ long Graph::get_timestep() { return timestep; }
 
 double Graph::get_mean() { return boost::accumulators::mean(acc); }
 
-Result Graph::get_result()
+Betweenness_Result Graph::get_result()
 {
-  Result res;
+  Betweenness_Result res;
   res.keys = keys;
   res.vals = vals;
   res.mean = accumulators::mean(acc);

@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     std::map<std::string, int> vertice_map{};
     std::vector<std::string> keys{};
     std::vector<int> vals{};
-    std::vector<Result> results{};
+    std::vector<Betweenness_Result> results{};
     std::vector<std::string> radius_file_list{};
     std::deque<std::string> chain_file_list{};
     std::vector<long> ts{};
@@ -220,7 +220,7 @@ int main(int argc, char **argv) {
             // Send result
             BOOST_LOG_TRIVIAL(info)
                     << "[SLAVE: " << rank << "] (" << hostname << ") Done with job "
-                    << file << ". Send Result.\n";
+                    << file << ". Send Betweenness_Result.\n";
             world.send(0, TAG_RESULT, res);
             tscom.send(0, TAG_PART_TS, res.vals.data(), res.vals.size());
             // Check if a new job is coming
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
         std::sort(results.begin(), results.end(), cmp_ts);
         ts.reserve(results.size());
         std::for_each(results.begin(), results.end(),
-                      [&ts](Result const &res) { ts.push_back(res.ts); });
+                      [&ts](Betweenness_Result const &res) { ts.push_back(res.ts); });
         std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
         write_ts_header(ts_mean_file, runningConf);
         ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +

@@ -80,7 +80,7 @@ std::deque<std::string> glob_deq(const std::string &pattern)
   return filenames;
 }
 
-bool cmp_ts(const Result &a, const Result &b)
+bool cmp_ts(const Betweenness_Result &a, const Betweenness_Result &b)
 {
   return SI::natural::compare(std::to_string(a.ts), std::to_string(b.ts));
 }
@@ -117,9 +117,9 @@ std::string trim(const std::string &s)
 {
   auto wsfront = std::find_if_not(s.begin(), s.end(),
                                   [](int c) { return std::isspace(c); });
-  auto wsback = std::find_if_not(s.rbegin(), s.rend(),
-                                 [](int c) { return std::isspace(c); })
-                    .base();
+  auto wsback = std::find_if_not(s.rbegin(), s.rend(), [](int c) {
+                  return std::isspace(c);
+                }).base();
   return (wsback <= wsfront ? std::string() : std::string(wsfront, wsback));
 }
 
@@ -267,10 +267,11 @@ void check_path(const boost::filesystem::path &path)
 
 void output_centrality_ts(std::ofstream &ts_mean_file,
                           const Config &runningConf,
-                          const std::vector<Result> &results,
+                          const std::vector<Betweenness_Result> &results,
                           const std::map<int, std::string> &inv_vertice_map)
 {
   auto p = fs::path(runningConf.OutputPath + "/" + ts_centrality_path);
+  p /= "ts";
   check_path(p);
   for (auto &v : results) {
     ts_mean_file << convFillString(v.ts, 9) << runningConf.sep
@@ -386,6 +387,29 @@ void shuffleParticles(std::vector<int> &shuffleVec)
   }
 }
 
+void output_cell_ts(const Config &runningConf,
+                    std::vector<Betweenness_Result> &result,
+                    std::vector<long> &ts, std::vector<decomp_table> &decomp)
+{
+  auto p = fs::path(runningConf.OutputPath + "/" + ts_centrality_path);
+  p /= "cells";
+  check_path(p);
+  for (auto &elem : decomp) {
+    std::ofstream f(p.string() + "/" + elem.cellstr + ".csv");
+    f << "ts" << runningConf.sep << "mean" << runningConf.sep << "kur"
+      << runningConf.sep << "var" << runningConf.sep << "skew\n";
+    for (auto &ts : result) {
+      if (ts.ts == 0)
+        break;
+      f << ts.ts << runningConf.sep;
+      f << ts.aggr_per_cell[elem.cellstr]["mean"] << runningConf.sep;
+      f << ts.aggr_per_cell[elem.cellstr]["kur"] << runningConf.sep;
+      f << ts.aggr_per_cell[elem.cellstr]["var"] << runningConf.sep;
+      f << ts.aggr_per_cell[elem.cellstr]["skew"] << "\n";
+    }
+  }
+}
+
 Config getGridConfigObj(INIReader &reader)
 {
   Config conf;
@@ -411,6 +435,7 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
   conf.randomly_selected =
       static_cast<int>(reader.GetInteger(type, "randomlySelected", 20));
   conf.contact_filename = reader.Get(type, "ContactfileName", "");
+  conf.particle_filename = reader.Get(type, "ParticlefileName", "");
   return conf;
 }
 
@@ -427,15 +452,16 @@ Config getVelocityConfigObj(INIReader &reader)
   return conf;
 }
 
-Config getPropertiesConfigObj(INIReader &reader){
-    Config conf;
-    conf.InputPath = reader.Get("properties", "inputPath", "");
-    conf.OutputPath = reader.Get("properties", "outputPath", "");
-    conf.contact_filename = reader.Get("properties", "ContactfileName", "");
-    conf.particle_filename = reader.Get("properties", "ParticlefileName", "");
-    conf.spinup_time = reader.GetInteger("properties", "spinupTime", 0);
-    conf.chunk_len = reader.GetInteger("properties", "chunkLen", 0);
-    return conf;
+Config getPropertiesConfigObj(INIReader &reader)
+{
+  Config conf;
+  conf.InputPath = reader.Get("properties", "inputPath", "");
+  conf.OutputPath = reader.Get("properties", "outputPath", "");
+  conf.contact_filename = reader.Get("properties", "ContactfileName", "");
+  conf.particle_filename = reader.Get("properties", "ParticlefileName", "");
+  conf.spinup_time = reader.GetInteger("properties", "spinupTime", 0);
+  conf.chunk_len = reader.GetInteger("properties", "chunkLen", 0);
+  return conf;
 }
 
 std::vector<std::string> getCartesianProduct(std::vector<int> &x,

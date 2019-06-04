@@ -1,4 +1,5 @@
 #include "dumpfile.h"
+#include "assert.h"
 #include "data.h"
 #include "decomposition.h"
 #include "sqlite_orm.h"
@@ -73,6 +74,7 @@ void dumpfile::parse_contacts()
     auto coord = dumpfile::calc_contactpoint(columns, radius);
     columns.cellstr = decomp.calc_cell(coord);
     auto cell = decomp.calc_cell_numeric(coord);
+    assert(cell.x >= 0 && cell.y >= 0 && cell.z >= 0);
     columns.cell_x = cell.x;
     columns.cell_y = cell.y;
     columns.cell_z = cell.z;
@@ -113,6 +115,7 @@ void dumpfile::parse_particles()
     coordinate coord{.x = columns.p_x, .y = columns.p_y, .z = columns.p_z};
     columns.cellstr = decomp.calc_cell(coord);
     auto cell = decomp.calc_cell_numeric(coord);
+    assert(cell.x >= 0 && cell.y >= 0 && cell.z >= 0);
     columns.cell_x = cell.x;
     columns.cell_y = cell.y;
     columns.cell_z = cell.z;

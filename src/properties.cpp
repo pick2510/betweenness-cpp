@@ -1,7 +1,6 @@
 //
 // Created by std on 10.05.19.
 //
-
 #include "properties.h"
 #include "INIReader.h"
 #include "PotentialEnergy.h"

@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
   auto part_path =
       std::string{runningConf.InputPath + "/" + runningConf.particle_filename};
   auto stor = initTSStorage(path);
-  auto particles = ParticleIndexStorage(part_path);
+  auto particle_storage = ParticleIndexStorage(part_path);
   auto radius_storage = initRadstorage(path);
   for (auto &elem : radius_storage.iterate<radius>()) {
     radius_map[elem.id] = elem.rad;
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
   assert(runningConf.randomly_selected <= partids.size());
   auto selected_particles = select_particles(partids, runningConf);
   std::vector<p_velocity_t> results{};
-  process_ts(particles, ts, selected_particles, results, ts_len);
+  process_ts(particle_storage, ts, selected_particles, results, ts_len);
   auto out_path = boost::filesystem::path(runningConf.OutputPath +
                                           std::string{"/velocities"});
   BOOST_LOG_TRIVIAL(info) << out_path.string();
