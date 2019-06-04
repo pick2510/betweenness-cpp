@@ -31,7 +31,9 @@ ADD_LIBRARY(sqlite3 STATIC
 
 # Core library. *.cpp should be added here.
 
-add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp ./src/graph_sqlite.cpp ./src/dumpfile.cpp ./src/decomposition.cpp src/PotentialEnergy.cpp include/PotentialEnergy.h)
+add_library(demtools STATIC ./src/utils.cpp ./src/graph.cpp
+        ./src/graph_sqlite.cpp ./src/dumpfile.cpp ./src/decomposition.cpp
+        src/PropertyCalculator.cpp include/PropertyCalculator.h)
 
 
 

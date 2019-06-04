@@ -3,7 +3,7 @@
 //
 #include "properties.h"
 #include "INIReader.h"
-#include "PotentialEnergy.h"
+#include "PropertyCalculator.h"
 #include "accumulator.h"
 #include "data.h"
 #include "grid.h"
@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
   auto world_size = world.size();
   int t_len{};
   std::deque<long> ts{};
-  std::string path;
+  std::string contact_path;
+  std::string particle_path;
   decom_vec_storage_t decomp_str;
   std::vector<int> keys{};
   std::vector<double> vals{};
@@ -73,15 +74,18 @@ int main(int argc, char *argv[])
     }
     runningConf = getPropertiesConfigObj(reader);
 
-    path =
+    contact_path =
         std::string{runningConf.InputPath + "/" + runningConf.contact_filename};
+
+    particle_path = std::string{runningConf.InputPath + "/" +
+                                runningConf.particle_filename};
     cellstr_path = boost::filesystem::path(runningConf.OutputPath + "/cells");
     system_path = boost::filesystem::path(runningConf.OutputPath + "/system");
     check_path(cellstr_path);
     check_path(system_path);
-    auto stor = initTSStorage(path);
-    auto particles = indexContactStorage(path);
-    auto radius_storage = initRadstorage(path);
+    auto stor = initTSStorage(contact_path);
+    auto particles = indexContactStorage(contact_path);
+    auto radius_storage = initRadstorage(contact_path);
     for (auto &elem : radius_storage.iterate<radius>()) {
       radius_map[elem.id] = elem.rad;
     }
@@ -96,7 +100,7 @@ int main(int argc, char *argv[])
     if (upper != ts.end())
       ts.erase(ts.begin(), upper);
     auto lookup_table = get_lookup_table(radius_map);
-    auto cell_db = initDecompstorage(path);
+    auto cell_db = initDecompstorage(contact_path);
     decomp_str = cell_db.get_all<decomp_table>();
     keys = getKeys(radius_map);
     vals = getVals(radius_map);
@@ -105,11 +109,11 @@ int main(int argc, char *argv[])
   broadcast(world, keys, MASTER);
   broadcast(world, decomp_str, MASTER);
   broadcast(world, vals, MASTER);
-  broadcast(world, path, MASTER);
-  auto db = indexContactStorage(path);
-
+  auto c_db = indexContactStorage(contact_path);
+  auto p_db = ParticleIndexStorage(particle_path);
   if (rank == MASTER) {
-    auto db = indexContactStorage(path);
+    auto c_db = indexContactStorage(contact_path);
+    auto p_db = ParticleIndexStorage(particle_path);
     long counter = 0;
     // sanity check of file list
     t_len = ts.size();
@@ -139,14 +143,14 @@ int main(int argc, char *argv[])
     std::vector<boost::mpi::request> reqs_world;
     BOOST_LOG_TRIVIAL(info) << "Intitalize systemfile";
     initialize_output_files(runningConf, decomp_str, system_path, cellstr_path);
-    submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world, results,
-                        v_index, counter);
+    submitCompleteWorld(world, world_size, t_len, ts, c_db, reqs_world, results,
+                        v_index, counter, p_db);
     bool stop = false;
 
     if (!ts.empty()) {
       submitPieces(world, runningConf, t_len, ts, decomp_str, results,
-                   system_path, cellstr_path, db, chunk_len, v_index,
-                   reqs_world, stop, world_size, counter);
+                   system_path, cellstr_path, c_db, chunk_len, v_index,
+                   reqs_world, stop, world_size, counter, p_db);
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sent all jobs.\n";
       wait_all(reqs_world.begin(), reqs_world.end());
     }
@@ -165,17 +169,22 @@ int main(int argc, char *argv[])
     std::map<int, double> radius = constructMap(keys, vals);
     bool stop = false;
     while (!stop) {
-      tuple_storage_t data_recv{};
-      size_t col_size;
+      tuple_contact_storage_t data_contact_recv{};
+      tuple_particle_storage_t data_particle_recv{};
+      size_t contact_col_size, particle_col_size;
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] (" << hostname << ") Intialized JOB";
-      world.recv(0, TAG_SIZE, col_size);
-      data_recv.resize(col_size);
-      world.recv(0, TAG_FILE, data_recv);
-      auto timestep = std::get<10>(*data_recv.begin());
+      world.recv(0, TAG_SIZE, contact_col_size);
+      data_contact_recv.resize(contact_col_size);
+      world.recv(0, TAG_FILE, data_contact_recv);
+      world.recv(0, TAG_SIZE, particle_col_size);
+      data_particle_recv.resize(particle_col_size);
+      world.recv(0, TAG_P_COL, data_particle_recv);
+      auto timestep = std::get<10>(*data_contact_recv.begin());
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] recevied ts: " << timestep;
-      PotentialEnergy pe(radius, data_recv, decomp_str);
+      PropertyCalculator pe(radius, data_contact_recv, data_particle_recv,
+                            decomp_str);
       pe.aggregate_per_cell();
       auto const properties_map = pe.getAggregateMap();
       aggr_result_t aggregate{.agg = properties_map, .ts = timestep};
@@ -192,10 +201,10 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   decom_vec_storage_t decomp_str,
                   std::vector<aggr_result_t> &results,
                   const boost::filesystem::path &system_path,
-                  boost::filesystem::path &cellstr_path, c_storage_index_t &db,
-                  int &chunk_len, long &v_index,
+                  boost::filesystem::path &cellstr_path,
+                  c_storage_index_t &c_db, int &chunk_len, long &v_index,
                   std::vector<boost::mpi::request> &reqs_world, bool &stop,
-                  int world_size, long &counter)
+                  int world_size, long &counter, p_storage_index_t &p_db)
 {
   while (!ts.empty()) {
     if (auto f_rank = test_any(reqs_world.begin(), reqs_world.end())) {
@@ -208,7 +217,7 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
 
       // Send the new job.
       long timestep{ts.front()};
-      auto cols = db.select(
+      auto contact_cols = c_db.select(
           columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
                   &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
                   &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
@@ -216,7 +225,17 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   &ContactColumns::ct_force_z, &ContactColumns::cellstr,
                   &ContactColumns::ts),
           where(c(&ContactColumns::ts) == timestep));
-      auto col_size = cols.size();
+      auto particle_cols = p_db.select(
+          columns(&ParticleColumns::p_id, &ParticleColumns::p_vx,
+                  &ParticleColumns::p_vy, &ParticleColumns::p_vz,
+                  &ParticleColumns::p_coord, &ParticleColumns::p_disp_x,
+                  &ParticleColumns::p_disp_y, &ParticleColumns::p_disp_z,
+                  &ParticleColumns::p_ke_rot, &ParticleColumns::p_ke_tra,
+                  &ParticleColumns::p_ke_tra, &ParticleColumns::ts,
+                  &ParticleColumns::cellstr),
+          where(c(&ParticleColumns::ts) == timestep));
+      auto particle_col_size = particle_cols.size();
+      auto contact_col_size = contact_cols.size();
       BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending new job (" << timestep
                               << ") to SLAVE " << dst_rank;
       BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
@@ -224,8 +243,10 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
       BOOST_LOG_TRIVIAL(info)
           << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
           << "% done";
-      world.send(dst_rank, TAG_SIZE, col_size);
-      world.send(dst_rank, TAG_FILE, cols);
+      world.send(dst_rank, TAG_SIZE, contact_col_size);
+      world.send(dst_rank, TAG_FILE, contact_cols);
+      world.send(dst_rank, TAG_SIZE, particle_col_size);
+      world.send(dst_rank, TAG_P_COL, particle_cols);
       ts.pop_front();
       *iterator = world.irecv(dst_rank, TAG_RESULT, results[v_index++]);
       if (v_index == chunk_len) {
@@ -241,21 +262,22 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
         for (dst_rank = 1; dst_rank < world_size; ++dst_rank) {
           world.send(dst_rank, TAG_BREAK, stop);
         }
-        submitCompleteWorld(world, world_size, t_len, ts, db, reqs_world,
-                            results, v_index, counter);
+        submitCompleteWorld(world, world_size, t_len, ts, c_db, reqs_world,
+                            results, v_index, counter, p_db);
       }
     }
   }
 }
 void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
-                         int t_len, std::deque<long> &ts, c_storage_index_t &db,
+                         int t_len, std::deque<long> &ts,
+                         c_storage_index_t &c_db,
                          std::vector<boost::mpi::request> &reqs_world,
                          std::vector<aggr_result_t> &results, long &v_index,
-                         long &counter)
+                         long &counter, p_storage_index_t &p_db)
 {
   for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
     long timestep{ts.front()};
-    auto cols = db.select(
+    auto contact_cols = c_db.select(
         columns(&ContactColumns::p1_id, &ContactColumns::p2_id,
                 &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
                 &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
@@ -263,16 +285,28 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                 &ContactColumns::ct_force_z, &ContactColumns::cellstr,
                 &ContactColumns::ts),
         where(c(&ContactColumns::ts) == timestep));
-    auto col_size = cols.size();
+    auto particle_cols = p_db.select(
+        columns(&ParticleColumns::p_id, &ParticleColumns::p_vx,
+                &ParticleColumns::p_vy, &ParticleColumns::p_vz,
+                &ParticleColumns::p_coord, &ParticleColumns::p_disp_x,
+                &ParticleColumns::p_disp_y, &ParticleColumns::p_disp_z,
+                &ParticleColumns::p_ke_rot, &ParticleColumns::p_ke_tra,
+                &ParticleColumns::p_ke_tra, &ParticleColumns::ts,
+                &ParticleColumns::cellstr),
+        where(c(&ParticleColumns::ts) == timestep));
+    auto col_size = contact_cols.size();
+    auto particle_col_size = particle_cols.size();
     BOOST_LOG_TRIVIAL(info) << "[MASTER] Sending job " << timestep
                             << " to SLAVE (first loop) " << dst_rank << "\n";
     BOOST_LOG_TRIVIAL(info) << "[MASTER] v_index = " << v_index;
     counter++;
     BOOST_LOG_TRIVIAL(info)
-    << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
-    << "% done";
+        << "[MASTER] " << (static_cast<double>(counter) / t_len) * 100.0
+        << "% done";
     world.send(dst_rank, TAG_SIZE, col_size);
-    world.send(dst_rank, TAG_FILE, cols);
+    world.send(dst_rank, TAG_FILE, contact_cols);
+    world.send(dst_rank, TAG_SIZE, particle_col_size);
+    world.send(dst_rank, TAG_P_COL, particle_cols);
     // Post receive request for new jobs requests by slave [nonblocking]
     reqs_world.push_back(world.irecv(dst_rank, TAG_RESULT, results[v_index++]));
     ts.pop_front();

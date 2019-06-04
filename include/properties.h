@@ -28,16 +28,16 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                          int t_len, std::deque<long> &ts, c_storage_index_t &db,
                          std::vector<boost::mpi::request> &reqs_world,
                          std::vector<aggr_result_t> &results, long &v_index,
-                         long &counter);
+                         long &counter, p_storage_index_t &p_db);
 
 void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   int t_len, std::deque<long> &ts,
                   decom_vec_storage_t decomp_str,
                   std::vector<aggr_result_t> &results,
                   const boost::filesystem::path &system_path,
-                  boost::filesystem::path &cellstr_path, c_storage_index_t &db,
-                  int &chunk_len, long &v_index,
+                  boost::filesystem::path &cellstr_path,
+                  c_storage_index_t &c_db, int &chunk_len, long &v_index,
                   std::vector<boost::mpi::request> &reqs_world, bool &stop,
-                  int world_size, long &counter);
+                  int world_size, long &counter, p_storage_index_t &p_db);
 
 #endif // DEM_UTILS_PROPERTIES_H

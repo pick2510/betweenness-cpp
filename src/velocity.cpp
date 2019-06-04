@@ -4,7 +4,7 @@
 
 #include "velocity.h"
 #include "INIReader.h"
-#include "PotentialEnergy.h"
+#include "PropertyCalculator.h"
 #include "accumulator.h"
 #include "data.h"
 #include "grid.h"
