@@ -228,9 +228,10 @@ using tuple_contact_storage_t =
         &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
         &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
         &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-        &ContactColumns::ct_force_z, &ContactColumns::cellstr,
-        &ContactColumns::ts, &ContactColumns::c_force_x,
-        &ContactColumns::c_force_y, &ContactColumns::c_force_z)));
+        &ContactColumns::ct_force_z, &ContactColumns::c_force_x,
+        &ContactColumns::c_force_y, &ContactColumns::c_force_z,
+        &ContactColumns::sliding_contact, &ContactColumns::cellstr,
+        &ContactColumns::ts)));
 
 using tuple_particle_storage_t =
     decltype(std::declval<p_storage_index_t>().select(sqlite_orm::columns(
@@ -238,8 +239,9 @@ using tuple_particle_storage_t =
         &ParticleColumns::p_vz, &ParticleColumns::p_coord,
         &ParticleColumns::p_disp_x, &ParticleColumns::p_disp_y,
         &ParticleColumns::p_disp_z, &ParticleColumns::p_ke_rot,
-        &ParticleColumns::p_ke_tra, &ParticleColumns::p_ke_tra,
-        &ParticleColumns::ts, &ParticleColumns::cellstr)));
+        &ParticleColumns::p_ke_tra, &ParticleColumns::p_omegax,
+        &ParticleColumns::p_omegay, &ParticleColumns::p_omegaz,
+        &ParticleColumns::cellstr, &ParticleColumns::ts)));
 
 using decom_storage_t = decltype(initDecompstorage(""));
 using decom_vec_storage_t =

@@ -275,7 +275,7 @@ enum ContactTXTColumns {
   p2_x,
   p2_y,
   p2_z,
-  p1_vx,
+  p1_vx, // Magnitude and Components, mean over cell
   p1_vy,
   p1_vz,
   p2_vx,
@@ -286,7 +286,7 @@ enum ContactTXTColumns {
   is_periodic,
   c_force_x,
   c_force_y,
-  c_force_z,
+  c_force_z, // Magnitude of total Force
   cn_force_x,
   cn_force_y,
   cn_force_z,
@@ -301,7 +301,7 @@ enum ContactTXTColumns {
   disp_z,
   contact_area,
   contact_overlap,
-  sliding_contact,
+  sliding_contact, // If 1; contact.is_slipping, divide by contacts in cell
 };
 
 enum ParticleTXTColumns {
@@ -325,7 +325,7 @@ enum ParticleTXTColumns {
   displace_y,
   displace_z,
   disp_mag,
-  ke_rot,
+  ke_rot, // separately!
   ke_tra
 };
 
@@ -366,9 +366,11 @@ struct aggr_result_t {
   void serialize(Archive &ar, const unsigned int version)
   {
     ar &agg;
+    ar &global;
     ar &ts;
   }
   aggregate_map_t agg;
+  std::map<std::string, double> global;
   long ts;
 };
 

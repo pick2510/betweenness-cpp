@@ -44,14 +44,14 @@ int main(int argc, char **argv)
   try {
     configPath = getConfigPath(argc, argv);
   }
-  catch (std::invalid_argument e) {
+  catch (std::invalid_argument &e) {
     BOOST_LOG_TRIVIAL(error) << e.what();
     exit(EXIT_FAILURE);
   }
   try {
     reader = parseConfigFile(configPath);
   }
-  catch (std::invalid_argument e) {
+  catch (std::invalid_argument &e) {
     BOOST_LOG_TRIVIAL(error) << e.what();
     exit(EXIT_FAILURE);
   }

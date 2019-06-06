@@ -21,6 +21,10 @@ enum m_contact_cols {
   m_ct_force_x,
   m_ct_force_y,
   m_ct_force_z,
+  m_c_force_x,
+  m_c_force_y,
+  m_c_force_z,
+  m_c_sliding_contact,
   m_p1_r,
   m_p2_r,
   m_radstar,
@@ -30,8 +34,11 @@ enum m_contact_cols {
   m_ftan,
   m_penor,
   m_petan,
+  m_c_force_mag,
+  m_cn_force_mag,
+  m_ct_force_mag,
 };
-
+/*
 enum db_contact_cols {
   db_p1_id,
   db_p2_id,
@@ -48,8 +55,26 @@ enum db_contact_cols {
   db_c_force_y,
   db_c_force_z,
 };
+*/
 
-constexpr int m_contact_cols_items = 18;
+enum m_part_cols {
+  m_p_id,
+  m_p_vx,
+  m_p_vy,
+  m_p_vz,
+  m_p_coord,
+  m_p_disp_x,
+  m_p_disp_y,
+  m_p_disp_z,
+  m_p_ke_rot,
+  m_p_ke_tra,
+  m_p_omegax,
+  m_p_omegay,
+  m_p_omegaz
+};
+
+constexpr int m_contact_cols_items = 26;
+constexpr int m_particle_cols_items = 13;
 
 using d_mat = Eigen::MatrixXd;
 using c_storage_index_t = decltype(indexContactStorage(""));
@@ -60,9 +85,10 @@ using tuple_contact_storage_t =
         &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
         &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
         &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-        &ContactColumns::ct_force_z, &ContactColumns::cellstr,
-        &ContactColumns::ts, &ContactColumns::c_force_x,
-        &ContactColumns::c_force_y, &ContactColumns::c_force_z)));
+        &ContactColumns::ct_force_z, &ContactColumns::c_force_x,
+        &ContactColumns::c_force_y, &ContactColumns::c_force_z,
+        &ContactColumns::sliding_contact, &ContactColumns::cellstr,
+        &ContactColumns::ts)));
 
 using tuple_particle_storage_t =
     decltype(std::declval<p_storage_index_t>().select(sqlite_orm::columns(
@@ -70,21 +96,29 @@ using tuple_particle_storage_t =
         &ParticleColumns::p_vz, &ParticleColumns::p_coord,
         &ParticleColumns::p_disp_x, &ParticleColumns::p_disp_y,
         &ParticleColumns::p_disp_z, &ParticleColumns::p_ke_rot,
-        &ParticleColumns::p_ke_tra, &ParticleColumns::p_ke_tra,
-        &ParticleColumns::ts, &ParticleColumns::cellstr)));
+        &ParticleColumns::p_ke_tra, &ParticleColumns::p_omegax,
+        &ParticleColumns::p_omegay, &ParticleColumns::p_omegaz,
+        &ParticleColumns::cellstr, &ParticleColumns::ts)));
 
 class PropertyCalculator {
 private:
-  d_mat m_data;
+  d_mat m_c_data;
+  d_mat m_p_data;
   long ts;
   const std::map<int, double> &radius;
   tuple_contact_storage_t &contact_data;
-  std::multimap<std::string, int> cellstridx{};
+  std::multimap<std::string, int> c_cellstridx{}, p_cellstridx{};
   aggregate_map_t aggregate_map{};
+  std::map<std::string, double> global_map{};
   int tuple_size;
-  int vec_size;
+  int vec_c_size;
+  int vec_p_size;
   const decom_vec_storage_t &decomp_str;
   inline void calc_pot_energy(int &counter);
+  void calc_global_state();
+
+public:
+  const std::map<std::string, double> &getGlobalMap() const;
 
 public:
   PropertyCalculator(const std::map<int, double> &radius,

@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
     INIReader reader;
     // MASTER CODE
     BOOST_LOG_TRIVIAL(info) << "****************************************";
-    BOOST_LOG_TRIVIAL(info) << "Potential Energy Calculator";
-    BOOST_LOG_TRIVIAL(info) << "for DEM Output";
+    BOOST_LOG_TRIVIAL(info) << "Property calculator";
+    BOOST_LOG_TRIVIAL(info) << "for DEM Output, SQLite Version";
     BOOST_LOG_TRIVIAL(info) << "by Dominik Strebel (2019)";
     BOOST_LOG_TRIVIAL(info) << "****************************************";
     BOOST_LOG_TRIVIAL(info) << "Hostname MASTER: " << hostname;
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
     std::vector<boost::mpi::request> reqs_world;
     BOOST_LOG_TRIVIAL(info) << "Intitalize systemfile";
-    initialize_output_files(runningConf, decomp_str, system_path, cellstr_path);
+
     submitCompleteWorld(world, world_size, t_len, ts, c_db, reqs_world, results,
                         v_index, counter, p_db);
     bool stop = false;
@@ -157,6 +157,8 @@ int main(int argc, char *argv[])
     else {
       wait_all(reqs_world.begin(), reqs_world.end());
     }
+    initialize_output_files(runningConf, decomp_str, system_path, cellstr_path,
+                            results[0]);
     write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
@@ -180,14 +182,16 @@ int main(int argc, char *argv[])
       world.recv(0, TAG_SIZE, particle_col_size);
       data_particle_recv.resize(particle_col_size);
       world.recv(0, TAG_P_COL, data_particle_recv);
-      auto timestep = std::get<10>(*data_contact_recv.begin());
+      auto timestep = std::get<14>(*data_contact_recv.begin());
       BOOST_LOG_TRIVIAL(info)
           << "[SLAVE: " << rank << "] recevied ts: " << timestep;
       PropertyCalculator pe(radius, data_contact_recv, data_particle_recv,
                             decomp_str);
       pe.aggregate_per_cell();
       auto const properties_map = pe.getAggregateMap();
-      aggr_result_t aggregate{.agg = properties_map, .ts = timestep};
+      auto const global_map = pe.getGlobalMap();
+      aggr_result_t aggregate{
+          .agg = properties_map, .global = global_map, .ts = timestep};
       world.send(0, TAG_RESULT, aggregate);
       world.recv(0, TAG_BREAK, stop);
       BOOST_LOG_TRIVIAL(info) << "[SLAVE: " << rank << "] got properties)";
@@ -222,7 +226,9 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
                   &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
                   &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-                  &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                  &ContactColumns::ct_force_z, &ContactColumns::c_force_x,
+                  &ContactColumns::c_force_y, &ContactColumns::c_force_z,
+                  &ContactColumns::sliding_contact, &ContactColumns::cellstr,
                   &ContactColumns::ts),
           where(c(&ContactColumns::ts) == timestep));
       auto particle_cols = p_db.select(
@@ -231,8 +237,9 @@ void submitPieces(const boost::mpi::communicator &world, Config &runningConf,
                   &ParticleColumns::p_coord, &ParticleColumns::p_disp_x,
                   &ParticleColumns::p_disp_y, &ParticleColumns::p_disp_z,
                   &ParticleColumns::p_ke_rot, &ParticleColumns::p_ke_tra,
-                  &ParticleColumns::p_ke_tra, &ParticleColumns::ts,
-                  &ParticleColumns::cellstr),
+                  &ParticleColumns::p_omegax, &ParticleColumns::p_omegay,
+                  &ParticleColumns::p_omegaz, &ParticleColumns::cellstr,
+                  &ParticleColumns::ts),
           where(c(&ParticleColumns::ts) == timestep));
       auto particle_col_size = particle_cols.size();
       auto contact_col_size = contact_cols.size();
@@ -282,7 +289,9 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                 &ContactColumns::contact_overlap, &ContactColumns::cn_force_x,
                 &ContactColumns::cn_force_y, &ContactColumns::cn_force_z,
                 &ContactColumns::ct_force_x, &ContactColumns::ct_force_y,
-                &ContactColumns::ct_force_z, &ContactColumns::cellstr,
+                &ContactColumns::ct_force_z, &ContactColumns::c_force_x,
+                &ContactColumns::c_force_y, &ContactColumns::c_force_z,
+                &ContactColumns::sliding_contact, &ContactColumns::cellstr,
                 &ContactColumns::ts),
         where(c(&ContactColumns::ts) == timestep));
     auto particle_cols = p_db.select(
@@ -291,8 +300,9 @@ void submitCompleteWorld(const boost::mpi::communicator &world, int world_size,
                 &ParticleColumns::p_coord, &ParticleColumns::p_disp_x,
                 &ParticleColumns::p_disp_y, &ParticleColumns::p_disp_z,
                 &ParticleColumns::p_ke_rot, &ParticleColumns::p_ke_tra,
-                &ParticleColumns::p_ke_tra, &ParticleColumns::ts,
-                &ParticleColumns::cellstr),
+                &ParticleColumns::p_omegax, &ParticleColumns::p_omegay,
+                &ParticleColumns::p_omegaz, &ParticleColumns::cellstr,
+                &ParticleColumns::ts),
         where(c(&ParticleColumns::ts) == timestep));
     auto col_size = contact_cols.size();
     auto particle_col_size = particle_cols.size();
@@ -321,13 +331,12 @@ void write_results(Config &runningConf, decom_vec_storage_t decomp_str,
                    boost::filesystem::path &cellstr_path)
 {
   BOOST_LOG_TRIVIAL(info) << "Writing system sum";
-  std::ofstream f(system_path.string() + "/system.csv", std::ios::app);
-  calc_system_sum_write_file(results, f, runningConf);
+  std::ofstream f(system_path.string() + "/global.csv", std::ios::app);
+  write_global_state(results, f, runningConf);
   BOOST_LOG_TRIVIAL(info) << "Finished writing system sum";
 
   BOOST_LOG_TRIVIAL(info) << "Writing individual particles";
   BOOST_LOG_TRIVIAL(info) << "Create cellstr map";
-  BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
   BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
   write_cellstr_res(decomp_str, results, runningConf, cellstr_path);
   BOOST_LOG_TRIVIAL(info) << "Finished cellstr map";
@@ -335,17 +344,23 @@ void write_results(Config &runningConf, decom_vec_storage_t decomp_str,
 void initialize_output_files(const Config &runningConf,
                              decom_vec_storage_t decomp_str,
                              const boost::filesystem::path &system_path,
-                             const boost::filesystem::path &cellstr_path)
+                             const boost::filesystem::path &cellstr_path,
+                             aggr_result_t &res)
 {
-  std::ofstream f(system_path.string() + "/system.csv");
-  f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
-    << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
-  f.close();
+  std::ofstream f(system_path.string() + "/global.csv");
+  f << "ts" << runningConf.sep;
+  for (auto &elem : res.global) {
+    f << elem.first << runningConf.sep;
+  }
+  f << "\n";
   BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
   for (auto &elem : decomp_str) {
     std::ofstream f{cellstr_path.string() + "/" + elem.cellstr + ".csv"};
-    f << "ts" << runningConf.sep << "penor" << runningConf.sep << "petan"
-      << runningConf.sep << "ftan" << runningConf.sep << "fnor\n";
+    f << "ts" << runningConf.sep;
+    for (auto &elem : res.global) {
+      f << elem.first << runningConf.sep;
+    }
+    f << "\n";
   }
 }
 void write_cellstr_res(decom_vec_storage_t decomp_str,
@@ -359,28 +374,23 @@ void write_cellstr_res(decom_vec_storage_t decomp_str,
       if (ts.ts == 0)
         break;
       f << ts.ts << runningConf.sep;
-      f << ts.agg[elem.cellstr]["penor"] << runningConf.sep;
-      f << ts.agg[elem.cellstr]["petan"] << runningConf.sep;
-      f << ts.agg[elem.cellstr]["ftan"] << runningConf.sep;
-      f << ts.agg[elem.cellstr]["fnor"] << "\n";
+      for (auto &cell : ts.agg[elem.cellstr]) {
+        f << cell.second << runningConf.sep;
+      }
+      f << "\n";
     }
   }
 }
-void calc_system_sum_write_file(std::vector<aggr_result_t> &results,
-                                std::ofstream &f, Config &runningConf)
+void write_global_state(std::vector<aggr_result_t> &results, std::ofstream &f,
+                        Config &runningConf)
 {
-  for (auto &elem : results) {
-    Accumulator<double> penor, petan, ftan, fnor;
-    if (elem.ts == 0)
+  for (auto &ts : results) {
+    if (ts.ts == 0)
       break;
-    for (auto &cell : elem.agg) {
-      penor(cell.second["penor"]);
-      petan(cell.second["petan"]);
-      ftan(cell.second["ftan"]);
-      fnor(cell.second["fnor"]);
+    f << ts.ts << runningConf.sep;
+    for (auto &elem : ts.global) {
+      f << elem.second << runningConf.sep;
     }
-    f << elem.ts << runningConf.sep << penor.getAccVal() << runningConf.sep
-      << petan.getAccVal() << runningConf.sep << ftan.getAccVal()
-      << runningConf.sep << fnor.getAccVal() << "\n";
+    f << "\n";
   }
 }

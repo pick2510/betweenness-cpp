@@ -66,7 +66,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
 set(CMAKE_C_FLAGS_DEBUG "-Og -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -mtune=native")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -mtune=native")
+set(CMAKE_C_FLAGS_RELEASE "-O3  -mtune=native")
 
 
 #set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=undefined,leak")
