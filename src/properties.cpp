@@ -138,6 +138,8 @@ int main(int argc, char *argv[])
       world.abort(EXIT_FAILURE);
       return EXIT_FAILURE;
     }
+    initialize_output_files(runningConf, decomp_str, system_path, cellstr_path,
+                            results[0]);
     long v_index = 0;
     BOOST_LOG_TRIVIAL(info) << "Memory: " << results.size();
     std::vector<boost::mpi::request> reqs_world;
@@ -157,8 +159,7 @@ int main(int argc, char *argv[])
     else {
       wait_all(reqs_world.begin(), reqs_world.end());
     }
-    initialize_output_files(runningConf, decomp_str, system_path, cellstr_path,
-                            results[0]);
+
     write_results(runningConf, decomp_str, results, system_path, cellstr_path);
     stop = true;
     for (int dst_rank = 1; dst_rank < world_size; ++dst_rank) {
