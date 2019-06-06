@@ -349,16 +349,17 @@ void initialize_output_files(const Config &runningConf,
 {
   std::ofstream f(system_path.string() + "/global.csv");
   f << "ts" << runningConf.sep;
-  for (auto &elem : res.global) {
-    f << elem.first << runningConf.sep;
+  auto cols_size = sizeof(f_header) / sizeof(f_header[0]);
+  for (int i = 0; i < cols_size; i++) {
+    f << f_header[i] << runningConf.sep;
   }
   f << "\n";
   BOOST_LOG_TRIVIAL(info) << "Intitalize cellfiles";
   for (auto &elem : decomp_str) {
     std::ofstream f{cellstr_path.string() + "/" + elem.cellstr + ".csv"};
     f << "ts" << runningConf.sep;
-    for (auto &elem : res.global) {
-      f << elem.first << runningConf.sep;
+    for (int i = 0; i < cols_size; i++) {
+      f << f_header[i] << runningConf.sep;
     }
     f << "\n";
   }
@@ -370,6 +371,7 @@ void write_cellstr_res(decom_vec_storage_t decomp_str,
   for (auto &elem : decomp_str) {
     std::ofstream f(cellstr_path.string() + "/" + elem.cellstr + ".csv",
                     std::ios::app);
+    auto cols_size = sizeof(f_header) / sizeof(f_header[0]);
     for (auto &ts : results) {
       if (ts.ts == 0)
         break;

@@ -106,11 +106,11 @@ public:
 constexpr char ts_particle_path[] = "particles";
 constexpr char ts_centrality_path[] = "centrality";
 
-/*constexpr char f_header[][] = { "penor",
-                                "petan",
+constexpr char const *f_header[] = {"penor",
+                                    "petan",
                                 "ftan",
-                                "fnor",
-                                "slipping_ratio",
+                                    "fnor"
+                                    "slipping_ratio",
                                 "cforce_x",
                                 "cforce_y",
                                 "cforce_z",
@@ -120,8 +120,21 @@ constexpr char ts_centrality_path[] = "centrality";
                                 "cn_force_x",
                                 "cn_force_y",
                                 "cn_force_z",
-                                ""};
-*/
+                                    "c_force_mag",
+                                    "ct_force_mag",
+                                    "cn_force_mag",
+                                    "vel_x",
+                                    "vel_y",
+                                    "vel_z",
+                                    "vel_mag",
+                                    "coord",
+                                    "ke_rot",
+                                    "ke_tot",
+                                    "disp_x",
+                                    "disp_y",
+                                    "disp_z",
+                                    "disp_mag"};
+
 struct ContactColumns {
   friend class boost::serialization::access;
   template <class Archive>

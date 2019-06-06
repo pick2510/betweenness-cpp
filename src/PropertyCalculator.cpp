@@ -296,7 +296,7 @@ void PropertyCalculator::aggregate_per_cell()
     agg_elem["ct_force_z"] = acc_ct_force_z.get_mean();
     agg_elem["cn_force_x"] = acc_cn_force_x.get_mean();
     agg_elem["cn_force_y"] = acc_cn_force_y.get_mean();
-    agg_elem["cn_force_y"] = acc_cn_force_z.get_mean();
+    agg_elem["cn_force_z"] = acc_cn_force_z.get_mean();
     agg_elem["c_force_mag"] = acc_c_force_mag.get_mean();
     agg_elem["ct_force_mag"] = acc_ct_force_mag.get_mean();
     agg_elem["cn_force_mag"] = acc_cn_force_mag.get_mean();
