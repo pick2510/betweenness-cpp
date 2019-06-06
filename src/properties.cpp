@@ -376,8 +376,9 @@ void write_cellstr_res(decom_vec_storage_t decomp_str,
       if (ts.ts == 0)
         break;
       f << ts.ts << runningConf.sep;
-      for (auto &cell : ts.agg[elem.cellstr]) {
-        f << cell.second << runningConf.sep;
+      for (int i = 0; i < cols_size; i++) {
+        // for (auto &cell : ts.agg[elem.cellstr]) {
+        f << ts.agg[elem.cellstr][f_header[i]] << runningConf.sep;
       }
       f << "\n";
     }
@@ -386,12 +387,13 @@ void write_cellstr_res(decom_vec_storage_t decomp_str,
 void write_global_state(std::vector<aggr_result_t> &results, std::ofstream &f,
                         Config &runningConf)
 {
+  auto cols_size = sizeof(f_header) / sizeof(f_header[0]);
   for (auto &ts : results) {
     if (ts.ts == 0)
       break;
     f << ts.ts << runningConf.sep;
-    for (auto &elem : ts.global) {
-      f << elem.second << runningConf.sep;
+    for (int i = 0; i < cols_size; i++) {
+      f << ts.global[f_header[i]] << runningConf.sep;
     }
     f << "\n";
   }
