@@ -281,7 +281,8 @@ int main(int argc, char **argv)
     std::for_each(
         results.begin(), results.end(),
         [&ts_res](Betweenness_Result const &res) { ts_res.push_back(res.ts); });
-    std::ofstream ts_mean_file(runningConf.OutputPath + "/properties.csv");
+    std::ofstream ts_mean_file(runningConf.OutputPath +
+                               "/betweenness_global.csv");
     write_ts_header(ts_mean_file, runningConf);
     ts_mean_file << std::setprecision(std::numeric_limits<double>::digits10 +
                                       1);

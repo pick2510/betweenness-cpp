@@ -93,7 +93,7 @@ Betweenness_Result GraphSQLite::get_result()
     Acc cell_acc;
     for (auto i = it.first; i != it.second; ++i) {
       cell_acc((*i).second);
-      BOOST_LOG_TRIVIAL(info) << (*i).second;
+      // BOOST_LOG_TRIVIAL(info) << (*i).second;
     }
     agg_per_cell[elem.cellstr]["mean"] = accumulators::mean(cell_acc);
     agg_per_cell[elem.cellstr]["kur"] = accumulators::kurtosis(cell_acc);

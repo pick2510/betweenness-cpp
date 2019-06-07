@@ -103,8 +103,8 @@ public:
   double q_099;
 };
 
-constexpr char ts_particle_path[] = "particles";
-constexpr char ts_centrality_path[] = "centrality";
+constexpr char ts_particle_path[] = "/betweenness/particles";
+constexpr char ts_centrality_path[] = "/betweenness/centrality";
 
 constexpr char const *f_header[] = {
     "penor",          "petan",      "ftan",        "fnor",
