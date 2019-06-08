@@ -208,7 +208,7 @@ int main(int argc, char **argv)
           world.send(dst_rank, TAG_SIZE, contact_col_size);
           world.send(dst_rank, TAG_FILE, contact_columns);
           world.send(dst_rank, TAG_SIZE, particle_col_size);
-          world.send(dst_rank, TAG_P_COL, particle_col);
+          world.send(dst_rank, TAG_P_COL, particle_columns);
           ts.pop_front();
           reqs_world[dst_rank - 1] =
               world.irecv(dst_rank, TAG_RESULT, results[v_index]);
