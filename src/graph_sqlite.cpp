@@ -64,12 +64,17 @@ void GraphSQLite::calculate_betweenness_centrality()
   BOOST_LOG_TRIVIAL(info) << "Calculated Betweenness Centrality";
   BGL_FORALL_VERTICES(vertex, graph, Dump_Graph)
   {
-    auto val = c_map[vertex];
-    keys.push_back(vertex);
-    vals.push_back(val);
-    auto id = std::stoi(inv_map.at(vertex));
-    // BOOST_LOG_TRIVIAL(info) << "Vertex: " << vertex << " id: " << id;
-    part_cell_map.insert(std::make_pair(vertex, part_cell_map.at(id)));
+    try {
+      auto val = c_map[vertex];
+      keys.push_back(vertex);
+      vals.push_back(val);
+      auto id = std::stoi(inv_map.at(vertex));
+      // BOOST_LOG_TRIVIAL(info) << "Vertex: " << vertex << " id: " << id;
+      part_cell_map.insert(std::make_pair(vertex, part_cell_map.at(id)));
+    }
+    catch (std::out_of_range &ex) {
+      continue;
+    }
   }
   v_betweeness.resize(vals.size());
   std::copy(vals.begin(), vals.end(), v_betweeness.begin());
