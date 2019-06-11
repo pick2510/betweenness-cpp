@@ -42,8 +42,13 @@ void GraphSQLite::generate_graph()
   // auto columns =
   //   db.get_all<ContactColumns>(where(c(&ContactColumns::ts) == timestep));
   for (const auto &elem : contact_cols) {
-    boost::add_edge(v_map.at(std::to_string(elem.p1_id)),
-                    v_map.at(std::to_string(elem.p2_id)), graph);
+    try {
+      boost::add_edge(v_map.at(std::to_string(elem.p1_id)),
+                      v_map.at(std::to_string(elem.p2_id)), graph);
+    }
+    catch (std::out_of_range &exc) {
+      continue;
+    }
     /*BOOST_LOG_TRIVIAL(info)
         << "GRAPH: p1_id-> " << elem.p1_id << ": "
         << v_map.at(std::to_string(elem.p1_id)) << " p2_id: " << elem.p2_id
