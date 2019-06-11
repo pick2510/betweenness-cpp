@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <atomic>
+#include <boost/stacktrace.hpp>
 #include <cmath>
 #include <deque>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <signal.h> // ::signal, ::raise
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -32,9 +34,20 @@
 #include <boost/serialization/vector.hpp>
 #include <unistd.h>
 
+void my_signal_handler(int signum)
+{
+  ::signal(signum, SIG_DFL);
+  // boost::stacktrace::safe_dump_to("./backtrace.dump");
+  std::cout << boost::stacktrace::stacktrace();
+  ::raise(SIGABRT);
+}
+
 int main(int argc, char **argv)
 {
+
   // Initialize global object
+  ::signal(SIGSEGV, &my_signal_handler);
+  ::signal(SIGABRT, &my_signal_handler);
   char hostname[HOSTNAME_LEN]{};
   boost::mpi::environment env{argc, argv};
   boost::mpi::communicator world;
