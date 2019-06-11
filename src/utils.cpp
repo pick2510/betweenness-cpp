@@ -436,6 +436,7 @@ Config getBetweennessConfigObj(INIReader &reader, const char *type)
       static_cast<int>(reader.GetInteger(type, "randomlySelected", 20));
   conf.contact_filename = reader.Get(type, "ContactfileName", "");
   conf.particle_filename = reader.Get(type, "ParticlefileName", "");
+  conf.spinup_time = reader.GetInteger(type, "spinupTime", 0);
   return conf;
 }
 

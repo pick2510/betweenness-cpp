@@ -106,6 +106,10 @@ int main(int argc, char **argv)
       ts.push_back(elem.ts);
     }
     std::sort(ts.begin(), ts.end());
+    auto upper =
+        std::lower_bound(ts.begin(), ts.end(), runningConf.spinup_time);
+    if (upper != ts.end())
+      ts.erase(ts.begin(), upper);
     auto lookup_table = get_lookup_table(radius_map);
     vertice_map = get_vertice_map(radius_map);
     inv_vertice_map = inverse_map(vertice_map);
