@@ -97,8 +97,8 @@ int main(int argc, char **argv)
     auto lookup_table = get_lookup_table(radius_file);
     vertice_map = get_vertice_map(radius_file);
     inv_vertice_map = inverse_map(vertice_map);
-    std::ofstream vertice_out("vertice_map.txt");
-    std::ofstream inv_out("inverse_vertice_map.txt");
+    std::ofstream vertice_out(runningConf.OutputPath + "/vertice_map.txt");
+    std::ofstream inv_out(runningConf.OutputPath + "/inverse_vertice_map.txt");
     out_map(vertice_map, vertice_out);
     out_map(inv_vertice_map, inv_out);
     keys = getKeys(vertice_map);
