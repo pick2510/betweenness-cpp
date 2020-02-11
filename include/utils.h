@@ -161,4 +161,13 @@ bool cmp_second(const std::pair<K, V> &a, const std::pair<K, V> &b)
   return a.second < b.second;
 }
 
+template <typename K, typename V>
+void out_map(std::map<K, V> &map, std::ostream &out)
+
+{
+  for (auto &e : map) {
+    out << e.first << "," << e.second << "\n";
+  }
+}
+
 #endif
