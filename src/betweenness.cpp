@@ -89,6 +89,7 @@ int main(int argc, char **argv)
       world.abort(-255);
       exit(EXIT_FAILURE);
     }
+    SI::natural::sort(radius_file_list);
     auto radius_file = read_radius_file(radius_file_list[0]);
 
     radius_file.pop_back();
