@@ -40,14 +40,28 @@ void Graph::set_fpointer(int n) { goto_line(file, n); }
 
 void Graph::generate_graph()
 {
+  int error_count = 0;
   std::string line;
   while (std::getline(file, line)) {
     std::vector<std::string> splitted_line;
     split_string(line, splitted_line);
-    boost::add_edge(v_map.at(splitted_line[Graph::particle_1]),
-                    v_map.at(splitted_line[Graph::particle_2]), graph);
+    try {
+      boost::add_edge(v_map.at(splitted_line[Graph::particle_1]),
+                      v_map.at(splitted_line[Graph::particle_2]), graph);
+    }
+    catch (const std::exception &e) {
+      BOOST_LOG_TRIVIAL(error)
+          << "GRAPH ERROR: Edge between: " << splitted_line[Graph::particle_1]
+          << " and " << splitted_line[Graph::particle_2]
+          << ". Didn't find in radius file";
+      error_count++;
+    }
   }
   BOOST_LOG_TRIVIAL(info) << "Graph finished!";
+  if (error_count != 0) {
+    BOOST_LOG_TRIVIAL(error)
+        << "ERROR: Timestep: " << timestep << " Count: " << error_count << "\n";
+  }
 }
 
 void Graph::calculate_betweenness_centrality()
